@@ -83,7 +83,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
         // Use JS library for unpacking ZIPs
         echo '<script src="resources/lib/jszip.min.js"></script>';
     }
-    if ((!array_key_exists('radio_browser', $config) || $config['radio_browser']) || !array_key_exists('track_radio_clicks', $config) || $config['track_radio_clicks']) {
+    if (!array_key_exists('radio_browser', $config) || $config['radio_browser']) {
         include_once 'api/radio-browser.php';
         if (file_exists('cache/radio-browser-baseurl.txt')) {
             $baseURL = file_get_contents('cache/radio-browser-baseurl.txt', true);
