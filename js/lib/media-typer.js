@@ -1,7 +1,0 @@
-var r={},e=/^[A-Za-z0-9][A-Za-z0-9!#$&^_.-]{0,126}$/,t=/^[A-Za-z0-9][A-Za-z0-9!#$&^_-]{0,126}$/,i=/^ *([A-Za-z0-9][A-Za-z0-9!#$&^_-]{0,126})\/([A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,126}) *$/,s=r.format=function(r){if(!r||"object"!=typeof r)throw new TypeError("argument obj is required");var i=r.subtype,s=r.suffix,n=r.type;if(!n||!t.test(n))throw new TypeError("invalid type");if(!i||!e.test(i))throw new TypeError("invalid subtype");var a=n+"/"+i;if(s){if(!t.test(s))throw new TypeError("invalid suffix");a+="+"+s}return a},n=r.parse=function(r){if(!r)throw new TypeError("argument string is required");if("string"!=typeof r)throw new TypeError("argument string is required to be a string");var e=i.exec(r.toLowerCase());if(!e)throw new TypeError("invalid media type");var t,s=e[1],n=e[2],a=n.lastIndexOf("+");-1!==a&&(t=n.substr(a+1),n=n.substr(0,a));return new o(s,n,t)},a=r.test=function(r){if(!r)throw new TypeError("argument string is required");if("string"!=typeof r)throw new TypeError("argument string is required to be a string");return i.test(r.toLowerCase())};
-/*!
- * media-typer
- * Copyright(c) 2014-2017 Douglas Christopher Wilson
- * MIT Licensed
- */
-function o(r,e,t){this.type=r,this.subtype=e,this.suffix=t}export{r as default,s as format,n as parse,a as test};
