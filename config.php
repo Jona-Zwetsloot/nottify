@@ -44,6 +44,9 @@ $config = [
     // Which language should the client use? 'auto', 'nl' or 'en'.
     'language' => 'auto',
 
+    // Should CURL verify SSL certificates? Always set to true, or otherwise your computer may be at risk!
+    'curl_verify_ssl_certificates' => true,
+
     // Should audio be normalized? Requires 'calculate_gain' to be set to true.
     'normalize_audio' => true,
 

@@ -16,6 +16,10 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
         $ch = curl_init('https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=' . rawurlencode($lastfm['apikey']) . '&token=' . rawurlencode($_GET['token']) . '&api_sig=' . rawurlencode($signature) . '&format=json');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, $config['useragent']);
+        if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        }
         $output = curl_exec($ch);
         if ($output === false) {
             exitMessage('Curl error', curl_error($ch));

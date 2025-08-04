@@ -15,6 +15,10 @@ header("Content-Type: audio/mpeg");
 header("Cache-Control: no-cache");
 header("Connection: keep-alive");
 
+if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+}
 curl_exec($ch);
 if ($output === false) {
     exitMessage('Curl error', curl_error($ch));

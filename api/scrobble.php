@@ -38,6 +38,10 @@ try {
         'content-type: application/x-www-form-urlencoded'
     ]);
     curl_setopt($ch, CURLOPT_USERAGENT, $config['useragent']);
+    if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    }
     $output = curl_exec($ch);
     echo $output;
 } catch (Exception $e) {
