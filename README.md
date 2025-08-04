@@ -7,7 +7,7 @@
 
 <br>
 
-**Have you ever wanted to host your own music library?** Here's your chance! Upload and manage your own music files with nottify. With it's ease of use and a familiar and intuitive layout, it's one of the most simple ways to take your music back in own hand. Not bought enough music to fill your own collection yet? Connect your Spotify Premium account to also access your Spotify collection.
+**Have you ever wanted to host your own music library?** Here's your chance! Upload and manage your own music files with nottify. With its ease of use and a familiar and intuitive layout, it's one of the most simple ways to take your music back in own hand. Not bought enough music to fill your own collection yet? Connect your Spotify Premium account to also access your Spotify collection.
 
 nottify is a PHP based web application. It is aimed at self-hosters. **You can just download a ZIP of the repo, unpack it and yeet it somewhere on your PHP-server and it will work immediately.** No setup required. No database. Just you and your music.
 

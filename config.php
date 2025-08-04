@@ -8,6 +8,9 @@ $spotify = [
     'enabled' => true,
     'client_id' => null,
     'client_secret' => null,
+
+    // IMPORTANT: Set "redirect_uri" to the spotify page in this directory. Also enter the same redirect uri when creating a Spotify API client.
+    // For example, if you host on localhost in the root directory it should be http://127.0.0.1:80/spotify, and in a subdirectory http://127.0.0.1:80/some-subdirectory-here/spotify
     'redirect_uri' => null,
 ];
 
@@ -33,7 +36,7 @@ $lastfm = [
 
 $config = [
     // Set the useragent for your nottify instance
-    'useragent' => 'nottify audio player/1.0.0 ( https://github.com/Jona-Zwetsloot/nottify )',
+    'useragent' => 'nottify audio player/1.0.1 ( https://github.com/Jona-Zwetsloot/nottify )',
 
     // Which theme should the client use? 'auto', 'light' or 'dark'.
     'theme' => 'auto',
@@ -48,15 +51,18 @@ $config = [
     // Tracks uploaded while this is set to false will never have normalization, even if later set to true.
     'calculate_gain' => true,
 
-    // Should Last.fm scrobble nottify tracks (Spotify content will not be scrobbled)
+    // Should Last.fm scrobble nottify tracks? Spotify content will not be scrobbled.
     // Note that the Last.fm API must also be enabled in the API settings above, otherwise scrobbling won't work
-    'lastfm_scrobble' => false,
+    'lastfm_scrobble' => true,
 
     // Should radio tracks delivered by the radio-browser API be visible on the home tab?
     'radio_browser' => true,
 
     // Should radio clicks be sent to the radio-browser API for their stats?
-    'track_radio_clicks' => false,
+    'track_radio_clicks' => true,
+
+    // Track total tracks listened, distribution over time and more for some nice graphs on the profile page
+    'track_listening' => true,
 
     // Which provider should deliver artist profile info? Array can contain 'genius', 'spotify' and/or 'musicbrainz'
     // Note that the APIs must also be enabled in the API settings above, otherwise they will be turned off
@@ -100,7 +106,7 @@ $config = [
     'change_metadata_enabled' => true,
 
     // Should artist page requests to artists who aren't in the library be blocked to prevent API abuse?
-    'prevent_api_abuse' => false,
+    'prevent_api_abuse' => true,
 
     // Should uploaded ZIP files be unpacked? This is convenient, but requires JSZip to be loaded.
     // Unpacking is done client-side, so the server won't be at risk for ZIP bombs. 
@@ -110,6 +116,12 @@ $config = [
     // Do not allow dots and slashes, as this poses a security risk for your file system.
     'folder_regex' => '/[^A-Za-z0-9_ \(\)-]/',
 ];
+
+if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
+    http_response_code(403);
+    header('Content-type: application/json');
+    exit(json_encode(['error' => 'This is a backend PHP file. It\'s not accessible from the client-side.']));
+}
 
 // Import some important code
 require_once 'include.php';

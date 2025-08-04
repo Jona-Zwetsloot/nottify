@@ -17,14 +17,24 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, $config['useragent']);
         $output = curl_exec($ch);
+        if ($output === false) {
+            exitMessage('Curl error', curl_error($ch));
+        }
+
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if ($status < 200 || $status >= 300) {
+            exitMessage('Invalid status code (' . $status . ')', $output);
+        }
+
         $result = json_decode($output, true);
         if (isset($result['session']['key'])) {
             $_SESSION['lastfm_token'] = $result['session']['key'];
             $_SESSION['lastfm_user'] = $result['session']['name'];
             $_SESSION['lastfm_subscribers'] = $result['session']['subscriber'];
+            exitMessage('Success', 'Your Last.fm account has been added.', ['href' => './', 'text' => 'Back to nottify']);
+        } else {
+            exitMessage('Could not retrieve session key', $output);
         }
-        exit;
-        exitMessage('Success', 'Your Last.fm account has been added.', ['href' => './', 'text' => 'Back to nottify']);
     } catch (Exception $e) {
         exitMessage('Error', sprintf('Curl failed with error #%d: %s', $e->getCode(), $e->getMessage()));
     }
