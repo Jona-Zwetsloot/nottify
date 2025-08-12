@@ -2378,9 +2378,6 @@ document.getElementById('lyric-preview').addEventListener('click', function () {
 
 let openedLyrics;
 async function initLyricContainers(lrc, activeTrack) {
-    for (const lyricContainer of document.getElementsByClassName('lyrics')) {
-        lyricContainer.innerText = '';
-    }
     if (lrc && activeTrack) {
         let formData = new FormData();
         formData.append('lyrics', lrc);
@@ -2406,6 +2403,9 @@ async function initLyricContainers(lrc, activeTrack) {
         return;
     }
     openedLyrics = activeTrack;
+    for (const lyricContainer of document.getElementsByClassName('lyrics')) {
+        lyricContainer.innerText = '';
+    }
     let lines = lrc.split(/\r?\n/);
     let seconds = 0;
     const isLRC = lrc.match(/^\[(\d+?):(\d+?)\.(\d+?)\]/m);
