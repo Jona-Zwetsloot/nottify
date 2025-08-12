@@ -4,13 +4,13 @@
 // Spotify requires you to create a free API account, see https://developer.spotify.com/dashboard/create
 // To actually use it to play stuff, Spotify requires you to have an active premium subscription
 // Your Spotify library will still be added to nottify if you connect a Spotify Free account, but tracks will be unplayable
+
+// IMPORTANT: Set "redirect_uri" to the spotify page in this directory. Also enter the same redirect uri when creating a Spotify API client.
+// For example, if you host on localhost in the root directory it should be http://127.0.0.1:80/spotify, and in a subdirectory http://127.0.0.1:80/some-subdirectory-here/spotify
 $spotify = [
     'enabled' => true,
     'client_id' => null,
     'client_secret' => null,
-
-    // IMPORTANT: Set "redirect_uri" to the spotify page in this directory. Also enter the same redirect uri when creating a Spotify API client.
-    // For example, if you host on localhost in the root directory it should be http://127.0.0.1:80/spotify, and in a subdirectory http://127.0.0.1:80/some-subdirectory-here/spotify
     'redirect_uri' => null,
 ];
 
@@ -36,7 +36,7 @@ $lastfm = [
 
 $config = [
     // Set the useragent for your nottify instance
-    'useragent' => 'nottify audio player/1.0.1 ( https://github.com/Jona-Zwetsloot/nottify )',
+    'useragent' => 'nottify audio player/1.0.2 ( https://github.com/Jona-Zwetsloot/nottify )',
 
     // Which theme should the client use? 'auto', 'light' or 'dark'.
     'theme' => 'auto',
@@ -44,7 +44,9 @@ $config = [
     // Which language should the client use? 'auto', 'nl' or 'en'.
     'language' => 'auto',
 
-    // Should CURL verify SSL certificates? Always set to true, or otherwise your computer may be at risk!
+    // When encountering SSL certificate problems, try to set 'curl_use_default_cacert' to false (cURL will use resources/cacert.pem instead of the default cacert)
+    // Still doesn't work? Set 'curl_verify_ssl_certificates' to false (not recommended, equivalent to using http instead of https)
+    'curl_use_default_cacert' => true,
     'curl_verify_ssl_certificates' => true,
 
     // Should audio be normalized? Requires 'calculate_gain' to be set to true.
@@ -123,7 +125,7 @@ $config = [
 if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
     http_response_code(403);
     header('Content-type: application/json');
-    exit(json_encode(['error' => 'This is a backend PHP file. It\'s not accessible from the client-side.']));
+    exit(json_encode(['error' => text('blocked_backend')]));
 }
 
 // Import some important code

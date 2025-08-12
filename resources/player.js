@@ -1,3 +1,32 @@
+const body = document.getElementsByTagName('body')[0];
+function logMessage(text, styling = '', size = 14) {
+    console.log('%c' + text, styling + 'font-family: "Corbel", "Avenir", "Helvetica Neue", "helvetica", "arial", "Hiragino Kaku Gothic ProN", "Meiryo", "MS Gothic"; font-size: ' + size + 'px;');
+}
+
+function getNameById(id) {
+    if (tracks[id] == null) {
+        return null;
+    }
+    return (tracks[id] && tracks[id].meta && tracks[id].meta.title) ? tracks[id].meta.title : id;
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+    }
+    return array;
+}
+
+function toBrightness(rgb, brightness) {
+    let luminance = Math.round(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]);
+    return [
+        Math.max(Math.min(rgb[0] + (brightness - luminance), Math.min(brightness + 50, 255)), Math.max(brightness - 50, 0)),
+        Math.max(Math.min(rgb[1] + (brightness - luminance), Math.min(brightness + 50, 255)), Math.max(brightness - 50, 0)),
+        Math.max(Math.min(rgb[2] + (brightness - luminance), Math.min(brightness + 50, 255)), Math.max(brightness - 50, 0))
+    ];
+}
+
 const repeat = {
     OFF: 'off',
     CONTEXT: 'context',
@@ -14,12 +43,14 @@ class Player {
             this.audio.loop = false;
             if (this.repeat == repeat.TRACK) {
                 // No loop
+                logMessage('🔂 repeat disabled', 'color: #ccb800;');
                 this.repeat = repeat.OFF;
                 this.buttons.toggleRepeat.classList.remove('one');
                 this.buttons.toggleRepeat.classList.remove('active');
             }
             else if (this.repeat == repeat.CONTEXT) {
                 // Loop track
+                logMessage('🔂 repeat track', 'color: #ccb800;');
                 this.repeat = repeat.TRACK;
                 this.buttons.toggleRepeat.classList.add('one');
                 this.buttons.toggleRepeat.classList.add('active');
@@ -27,6 +58,7 @@ class Player {
             }
             else if (this.repeat == repeat.OFF) {
                 // Loop context
+                logMessage('🔂 repeat queue', 'color: #ccb800;');
                 this.repeat = repeat.CONTEXT;
                 this.buttons.toggleRepeat.classList.remove('one');
                 this.buttons.toggleRepeat.classList.add('active');
@@ -44,17 +76,19 @@ class Player {
 
     // Play next track in queue
     queueNext(spotifySkipPlay = false) {
-        console.log('queueNext');
+        if (spotifySkipPlay !== true) {
+            spotifySkipPlay = false;
+        }
         if (this.queue.length == 0 && this.repeat == repeat.CONTEXT) {
             this.queue = this.loopQueue.slice();
         }
         if (this.queue.length == 0) {
+            logMessage('🔴 queue finished, playback stopped', 'color: #fd885a;');
             this.audio.pause();
-            if (!isNaN(this.audio.duration) && isFinite(this.audio.duration)) {
-                this.setTime(this.audio.duration);
-            }
+            this.setTime(0);
         }
         else {
+            logMessage('⏭️ next track, skipping ' + getNameById(this.track), 'color: #fd885a;');
             const item = this.queue[0];
             this.previousQueue.unshift(this.track);
             this.queue.shift();
@@ -63,6 +97,7 @@ class Player {
                 this.play(item.track, item.album);
             }
             else {
+                logMessage('▶️ ' + getNameById(item.track), 'color: #5a5cfd;');
                 this.audio.pause();
             }
         }
@@ -70,14 +105,35 @@ class Player {
     }
 
     // Play previous track
-    queuePrevious(spotifySkipPlay) {
-        if (this.audio.currentTime > 5) {
+    queuePrevious(spotifySkipPlay = false) {
+        if (this.track == null) {
+            return;
+        }
+        if (spotifySkipPlay !== true) {
+            spotifySkipPlay = false;
+        }
+
+        // If above 5 seconds, skip to track start
+        const currentTrackSpotify = tracks[this.track].name.startsWith('spotify:');
+        if (!currentTrackSpotify && this.audio.currentTime > 5) {
+            logMessage('⏮️ back to beginning of ' + getNameById(this.track), 'color: #fd885a;');
             this.setTime(0);
             if (this.audio.paused) {
                 this.audio.play();
             }
+            this.update();
+            return;
         }
-        else if (this.previousQueue.length > 0) {
+        if (currentTrackSpotify && currentPosition > 5) {
+            logMessage('⏮️ back to beginning of ' + getNameById(this.track), 'color: #fd885a;');
+            spotifyPlayer.seek(0);
+            this.update();
+            return;
+        }
+
+        // If under 5 seconds, play prev track
+        if (this.previousQueue.length > 0) {
+            logMessage('⏮️ previous track, skipping ' + getNameById(this.track), 'color: #fd885a;');
             const item = this.previousQueue[0];
             this.queue.unshift({
                 track: this.track,
@@ -89,8 +145,12 @@ class Player {
                 this.play(item);
             }
             else {
+                logMessage('▶️ ' + getNameById(item), 'color: #5a5cfd;');
                 this.audio.pause();
             }
+        }
+        else {
+            logMessage('⏮️ backward queue empty, no tracks skipped', 'color: #fd885a;');
         }
         this.update();
     }
@@ -100,12 +160,6 @@ class Player {
         this.audioContext = new AudioContext();
         this.mediaElementSource = this.audioContext.createMediaElementSource(this.audio);
         this.gainNode = this.audioContext.createGain();
-        if (tracks[this.track].gain) {
-            this.gainNode.gain.value = tracks[this.track].gain;
-        }
-        else {
-            this.gainNode.gain.value = 1.0;
-        }
         const self = this;
         function playGain() {
             self.mediaElementSource.connect(self.gainNode);
@@ -154,10 +208,12 @@ class Player {
 
     // Play a track
     async play(track, album) {
-        console.log('playing ' + track);
-        if (tracks[track] == null) {
+        if (track == null || tracks[track] == null) {
+            sendNotification('playback_failed', 'track_not_available');
             return;
         }
+
+        logMessage('▶️ ' + getNameById(track), 'color: #5a5cfd;');
         if (album) {
             this.album = album;
         }
@@ -199,7 +255,7 @@ class Player {
         updateExtraInfoPanel();
         this.update();
         if (lyricsTab.classList.contains('open')) {
-            displayLyrics();
+            openLyrics();
         }
 
         if (!isCurrentTrack) {
@@ -209,12 +265,22 @@ class Player {
                     await playSpotify(tracks[track].name);
                 }
                 else {
-                    sendNotification('error', 'spotify_disabled');
-                    return;
+                    if (body.dataset.spotifyToken) {
+                        let interval = setInterval(function () {
+                            if (typeof playSpotify === 'function') {
+                                clearInterval(interval);
+                                playSpotify(tracks[track].name);
+                            }
+                        }, 1000);
+                    }
+                    else {
+                        sendNotification('error', 'spotify_disabled');
+                        return;
+                    }
                 }
             }
             else {
-                if (this.audio.src != tracks[track].name && document.getElementsByTagName('body')[0].dataset.lastfmScrobble == 'true') {
+                if (this.audio.src != tracks[track].name && body.dataset.lastfmScrobble == 'true') {
                     let artist;
                     if (tracks[track].meta.artist) {
                         if (tracks[track].meta.artist.indexOf(', ') != -1) {
@@ -224,8 +290,8 @@ class Player {
                             artist = tracks[track].meta.artist;
                         }
                     }
-                    if (artist && tracks[track].meta.title) {
-                        fetch('api/scrobble?artist=' + artist + '&track=' + tracks[track].meta.title);
+                    if (body.dataset.lastfmScrobble == 'true' && artist && tracks[track].meta.title) {
+                        fetch('api/scrobble.php?artist=' + artist + '&track=' + tracks[track].meta.title);
                     }
                 }
                 this.audio.src = tracks[track].name;
@@ -234,12 +300,16 @@ class Player {
                 }
             }
         }
-        console.log('play with ' + track + ' and ' + album);
-        fetch('api/data?track=' + track + (album ? ('&album=' + album) : '') + '&duration=' + this.seconds + '&hour=' + (new Date().getHours()) + '&month=' + (new Date().getMonth()));
+        fetch('api/data.php?track=' + track + (album ? ('&album=' + album) : '') + '&duration=' + this.seconds + '&hour=' + (new Date().getHours()) + '&month=' + (new Date().getMonth()));
 
         if (initialPageOpened) {
             if (this.normalize && this.audioContext == null) {
                 this.initializeAudioContext();
+            }
+            if (this.normalize && this.gainNode) {
+                const gain = tracks[this.track].gain ? tracks[this.track].gain : 1;
+                this.gainNode.gain.value = gain;
+                logMessage('📶 gain set to ' + gain.toFixed(2), 'color: #3ab955;');
             }
             if (!tracks[track].name.startsWith('spotify:')) {
                 this.audio.currentTime = 0;
@@ -261,15 +331,21 @@ class Player {
         }
         if (this.normalize && this.audioContext == null) {
             this.initializeAudioContext();
+            const gain = tracks[this.track].gain ? tracks[this.track].gain : 1;
+            this.gainNode.gain.value = gain;
+            logMessage('📶 gain set to ' + gain.toFixed(2), 'color: #3ab955;');
         }
         if (tracks[this.track].name.startsWith('spotify:')) {
+            logMessage('⏯️ toggling playback of ' + getNameById(this.track), 'color: #5a5cfd;');
             spotifyPlayer.togglePlay();
         }
         else {
             if (this.audio.paused) {
+                logMessage('⏯️ resuming ' + getNameById(this.track), 'color: #5a5cfd;');
                 this.audio.play();
             } else {
                 this.audio.pause();
+                logMessage('⏯️ pausing ' + getNameById(this.track), 'color: #5a5cfd;');
             }
         }
         this.update();
@@ -277,10 +353,12 @@ class Player {
 
     // Mute the player
     toggleMuted() {
-        audio.muted = !audio.muted;
-        if (audio.muted) {
+        this.audio.muted = !this.audio.muted;
+        if (this.audio.muted) {
+            logMessage('🔊 sound enabled', 'color: #3ab955;');
             this.buttons.toggleMuted.classList.add('muted');
         } else {
+            logMessage('🔇 sound muted', 'color: #3ab955;');
             this.buttons.toggleMuted.classList.remove('muted');
         }
     }
@@ -297,6 +375,8 @@ class Player {
 
     // Set playback speed
     playbackRate(number) {
+        number = Math.max(Math.min(number, 5), 0.25);
+        logMessage('⚡ setting speed to ' + number, 'color: #c95afd;');
         this.audio.playbackRate = number;
         this.tempSpeed = number;
         localStorage.setItem('speed', this.audio.playbackRate);
@@ -308,6 +388,7 @@ class Player {
     // Set volume
     volume(e) {
         const value = e.target ? e.target.value : e;
+        logMessage('🔊 setting volume to ' + value, 'color: #3ab955;');
         if (e.target) {
             this.showRangeProgress(e.target);
         }
@@ -362,9 +443,14 @@ class Player {
         this.random = !this.random;
         if (this.random) {
             this.buttons.toggleRandom.classList.add('active');
+            this.normalQueue = this.queue.slice();
+            shuffleArray(this.queue);
         }
         else {
             this.buttons.toggleRandom.classList.remove('active');
+            if (this.normalQueue) {
+                this.queue = this.normalQueue.slice();
+            }
         }
         localStorage.setItem('random', this.random ? 'true' : 'false');
         if (document.getElementById('album-random')) {
@@ -401,6 +487,9 @@ class Player {
             else {
                 element.classList.remove('playing');
             }
+        }
+        if (document.getElementById('lyric-preview')) {
+            document.getElementById('lyric-preview').style.display = (this.track && tracks[this.track] && tracks[this.track].lyrics && document.documentElement.clientWidth <= 800) ? 'block' : 'none';
         }
         if (document.getElementById('album-track-list')) {
             if (this.track && document.getElementById('album-play') && this.album == openedAlbum) {
@@ -466,11 +555,40 @@ class Player {
         if (this.track) {
             albumImage.src = tracks[this.track].pictures[0] ? (tracks[this.track].pictures[0].url + '?v=' + tracks[this.track].pictures[0].version) : 'svg/placeholder.svg';
             albumImage.alt = tracks[this.track].meta.album ? tracks[this.track].meta.album : text('unknown_album');
+
+            const colorThief = new ColorThief();
+
+            if (albumImage.complete) {
+                setThemeColor()
+            } else {
+                albumImage.addEventListener('load', setThemeColor);
+            }
+            function setThemeColor() {
+                if (albumImage.src.indexOf('svg/placeholder.svg') != -1) {
+                    body.style.removeProperty('--track-light-theme-color');
+                    body.style.removeProperty('--track-dark-theme-color');
+                    body.style.removeProperty('--track-light-gradient-1');
+                    body.style.removeProperty('--track-light-gradient-2');
+                    body.style.removeProperty('--track-dark-gradient-1');
+                    body.style.removeProperty('--track-dark-gradient-2');
+                }
+                else {
+                    const rgb = colorThief.getColor(albumImage);
+                    body.style.setProperty('--track-light-theme-color', 'rgb(' + toBrightness(rgb, 190).join(', ') + ')');
+                    body.style.setProperty('--track-dark-theme-color', 'rgb(' + toBrightness(rgb, 90).join(', ') + ')');
+                    body.style.setProperty('--track-light-gradient-1', 'rgb(' + toBrightness(rgb, 240).join(', ') + ')');
+                    body.style.setProperty('--track-light-gradient-2', 'rgb(' + toBrightness(rgb, 210).join(', ') + ')');
+                    body.style.setProperty('--track-dark-gradient-1', 'rgb(' + toBrightness(rgb, 90).join(', ') + ')');
+                    body.style.setProperty('--track-dark-gradient-2', 'rgb(' + toBrightness(rgb, 60).join(', ') + ')');
+                }
+            }
+
             this.player.getElementsByClassName('name')[0].innerText = tracks[this.track].meta.title;
             this.player.getElementsByClassName('artist')[0].innerText = '';
             artistLinks(this.player.getElementsByClassName('artist')[0], this.track);
             updateFullscreenContainer();
             updateMediaSession(this.track);
+            initLyricContainers();
         }
     }
 
@@ -503,7 +621,7 @@ class Player {
         for (const albumTrack of albums['favorites'].tracks) {
             formData.append('tracks[]', albumTrack);
         }
-        const json = await request('api/edit', {
+        const json = await request('api/edit.php', {
             method: 'POST',
             body: formData
         }, ['status']);
@@ -571,6 +689,7 @@ class Player {
             self.stop();
         });
         this.audio.addEventListener('ended', function () {
+            logMessage('🏁 track ' + getNameById(self.track) + ' has finished playing');
             self.queueNext();
         });
         this.audio.addEventListener('progress', function () {
@@ -607,9 +726,12 @@ class Player {
 }
 
 let player = new Player(document.getElementById('player'));
-player.normalize = document.getElementsByTagName('body')[0].dataset.normalize == 'true';
+player.normalize = body.dataset.normalize == 'true';
 
 async function updateMediaSession(data) {
+    if (tracks[data] == null) {
+        return;
+    }
     const response = await fetch(tracks[data].pictures[0] ? tracks[data].pictures[0].url : 'svg/placeholder.svg');
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);

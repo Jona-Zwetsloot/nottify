@@ -11,6 +11,7 @@ function removeSpotify()
     unset($_SESSION['spotify_expires']);
     unset($_SESSION['spotify_time']);
     unset($_SESSION['spotify_state']);
+    unset($_SESSION['spotify_progress']);
 }
 
 if (isset($_SESSION['spotify_token'], $_SESSION['spotify_time'], $_SESSION['spotify_expires'], $_SESSION['spotify_refresh'])) {
@@ -29,6 +30,9 @@ if (isset($_SESSION['spotify_token'], $_SESSION['spotify_time'], $_SESSION['spot
                 'content-type: application/x-www-form-urlencoded',
                 'Authorization: Basic ' . base64_encode($spotify['client_id'] . ':' . $spotify['client_secret'])
             ]);
+            if (array_key_exists('curl_use_default_cacert', $config) && !$config['curl_use_default_cacert']) {
+                curl_setopt($ch, CURLOPT_CAINFO, str_replace('\\', '/', dirname(__FILE__)) . '/resources/cacert.pem');
+            }
             if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -36,7 +40,11 @@ if (isset($_SESSION['spotify_token'], $_SESSION['spotify_time'], $_SESSION['spot
             $output = curl_exec($ch);
             if ($output === false) {
                 if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
+                    header('Content-type: application/json');
                     exit(json_encode(['error' => curl_error($ch)]));
+                } else {
+                    exitMessage('Error', curl_error($ch));
+                    return;
                 }
             }
 
@@ -44,6 +52,7 @@ if (isset($_SESSION['spotify_token'], $_SESSION['spotify_time'], $_SESSION['spot
             if ($status < 200 || $status >= 300) {
                 removeSpotify();
                 if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
+                    header('Content-type: application/json');
                     exit(json_encode(['error' => $output]));
                 }
             }
@@ -62,14 +71,16 @@ if (isset($_SESSION['spotify_token'], $_SESSION['spotify_time'], $_SESSION['spot
                 $_SESSION['spotify_expires'] = $expiresIn;
             }
         } catch (Exception $e) {
-            exitMessage('Error', sprintf('Curl failed with error #%d: %s', $e->getCode(), $e->getMessage()));
+            exitMessage(text('curl_error'), 'https://accounts.spotify.com/api/token, ' . $e->getCode() . ', ' . $e->getMessage());
+            return;
         }
     }
 }
 
 if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
+    header('Content-type: application/json');
     if (empty($_SESSION['spotify_token'])) {
-        exit(json_encode(['error' => 'Something went wrong.']));
+        exit(json_encode(['error' => text('could_not_refresh_spotify_token')]));
     } else {
         exit(json_encode(['token' => $_SESSION['spotify_token']]));
     }

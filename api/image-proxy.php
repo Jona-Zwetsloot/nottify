@@ -17,7 +17,7 @@ function fallback()
     }
 
     if (!file_exists($savePath)) {
-        write_file($savePath, $imageContent);
+        writeFile($savePath, $imageContent);
     }
 
     // Set headers and output the image
@@ -68,7 +68,8 @@ if (extension_loaded('fileinfo')) {
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mimeType = $finfo->buffer($imageContent);
 } else {
-    exit(json_encode(['error' => 'Please install the fileinfo PHP extension']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => text('finfo_missing')]));
 }
 
 // Validate MIME type (only allow images)
@@ -77,7 +78,7 @@ if (!str_starts_with($mimeType, 'image/')) {
 }
 
 if (!file_exists($savePath)) {
-    write_file($savePath, $imageContent);
+    writeFile($savePath, $imageContent);
 }
 
 // Set headers and output the image

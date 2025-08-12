@@ -4,7 +4,7 @@
 if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
     http_response_code(403);
     header('Content-type: application/json');
-    exit(json_encode(['error' => 'This is a backend PHP file. It\'s not accessible from the client-side.']));
+    exit(json_encode(['error' => text('blocked_backend')]));
 }
 
 $countries = [
@@ -265,5 +265,5 @@ $countries = [
 function getCountryName($country)
 {
     global $countries;
-    return array_key_exists($country, $countries) ? $countries[$country] : 'en';
+    return str_replace(' ', '%20', array_key_exists($country, $countries) ? $countries[$country] : 'United Kingdom');
 }

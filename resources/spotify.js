@@ -4,17 +4,20 @@
 const script = document.createElement('script');
 script.src = 'https://sdk.scdn.co/spotify-player.js';
 script.async = true;
+document.body.appendChild(script);
+
 let interval;
-let currentPosition, currentDuration;
+var currentPosition, currentDuration;
 let spotifyPaused = true;
 let deviceId;
 let lastDate;
 let spotifyPlayer;
 let previousTrack, nextTrack;
-let token = document.getElementsByTagName('body')[0].dataset.spotifyToken;
+let token = body.dataset.spotifyToken;
 let ready = false;
 
-document.body.appendChild(script);
+// Spotify volume is louder than nottify volume, compensate for this by dividing by 5
+let spotifyVolumeCorrection = player.normalize ? 5 : 1;
 
 function pauseSpotify() {
     if (spotifyPlayer == null || spotifyPaused) {
@@ -34,13 +37,12 @@ async function playSpotify(uri, offset) {
             notification.getElementsByTagName('button')[0].click();
         }
     }
-    console.log('play Spotify');
     let content;
     if (!uri.startsWith('spotify:')) {
         return;
     }
+    let uris = [];
     if (uri.startsWith('spotify:track')) {
-        let uris = [];
         if (uri == null && player.track && tracks[player.track].name.startsWith('spotify:track')) {
             uri = tracks[player.track].name;
         }
@@ -69,8 +71,19 @@ async function playSpotify(uri, offset) {
         }
     }
     else {
+        uris.push(uri);
         content = { context_uri: uri };
     }
+    let table = [];
+    for (const uri of uris) {
+        const id = uri.replace('spotify:track:', '');
+        table.push({
+            uri: uri,
+            name: getNameById(id)
+        });
+    }
+    logMessage('🟢 uploading queue to Spotify');
+    console.table(table);
     fetch('https://api.spotify.com/v1/me/player/play?device_id=' + deviceId, {
         method: 'PUT',
         body: JSON.stringify(content),
@@ -86,8 +99,8 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         name: 'nottify',
         getOAuthToken: async (cb) => {
             // If token expires within 10 seconds, request a new one
-            if (parseInt(document.getElementsByTagName('body')[0].dataset.spotifyTokenExpires) - (Date.now() / 1000) < 10) {
-                const json = await request('api/refresh-token', { method: 'GET' }, ['token']);
+            if (parseInt(body.dataset.spotifyTokenExpires) - (Date.now() / 1000) < 10) {
+                const json = await request('api/refresh-token.php', { method: 'GET' }, ['token']);
                 if (json.token) {
                     token = json.token;
                 }
@@ -137,27 +150,31 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         }
     }
 
+    function updateSpotifyRepeat() {
+        if (token == null) {
+            return;
+        }
+        fetch('https://api.spotify.com/v1/me/player/repeat?state=' + player.repeat + '&device_id=' + deviceId, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+        });
+    }
+
     // Ready
     spotifyPlayer.addListener('ready', async function ({ device_id }) {
         ready = true;
         deviceId = device_id;
-        player.buttons.queuePrevious.addEventListener('click', function () {
-            if (player.previousQueue[0] && tracks[player.previousQueue[0]] && tracks[player.previousQueue[0]].name.startsWith('spotify:')) {
-                spotifyPlayer.previousTrack();
-            }
-        })
-        player.buttons.queueNext.addEventListener('click', function () {
-            if (player.queue[0] && tracks[player.queue[0].track] && tracks[player.queue[0].track].name.startsWith('spotify:')) {
-                spotifyPlayer.nextTrack();
-            }
-        })
         player.volumeSlider.value = isNaN(parseFloat(localStorage.getItem('volume'))) ? 100 : parseFloat(localStorage.getItem('volume'));
-        spotifyPlayer.setVolume(isNaN(parseFloat(localStorage.getItem('volume'))) ? 1 : parseFloat(localStorage.getItem('volume')) / 100);
+        spotifyPlayer.setVolume((isNaN(parseFloat(localStorage.getItem('volume'))) ? 1 : parseFloat(localStorage.getItem('volume')) / 100) / spotifyVolumeCorrection);
+        updateSpotifyRepeat();
     });
 
     // Not Ready
     spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-        console.log('Device ID has gone offline', device_id);
+        logMessage('Device ID has gone offline', device_id);
     });
     spotifyPlayer.addListener('initialization_error', ({ message }) => {
         console.error(message);
@@ -173,18 +190,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
     spotifyPlayer.connect();
 
     for (const button of player.player.querySelectorAll('[data-event="toggleRepeat"]')) {
-        button.addEventListener('click', function () {
-            if (token == null) {
-                return;
-            }
-            fetch('https://api.spotify.com/v1/me/player/repeat?state=' + player.repeat + '&device_id=' + deviceId, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token,
-                },
-            });
-        });
+        button.addEventListener('click', updateSpotifyRepeat);
     }
     for (const button of player.player.querySelectorAll('[data-event="toggleFavorite"]')) {
         button.addEventListener('click', function () {
@@ -222,7 +228,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         });
     }
     player.volumeSlider.addEventListener('input', function (e) {
-        spotifyPlayer.setVolume(e.target.value / 100);
+        spotifyPlayer.setVolume(e.target.value / 100 / spotifyVolumeCorrection);
     });
 
     player.progressSlider.addEventListener('input', function (e) {
@@ -232,6 +238,19 @@ window.onSpotifyWebPlaybackSDKReady = () => {
     })
 
     spotifyPlayer.addListener('player_state_changed', function (webPlaybackState) {
+        if (webPlaybackState == null) {
+            return;
+        }
+
+        // Sync nottify repeat with Spotify repeat
+        while (
+            (webPlaybackState.repeat_mode == 0 && player.repeat != repeat.OFF) ||
+            (webPlaybackState.repeat_mode == 1 && player.repeat != repeat.CONTEXT) ||
+            (webPlaybackState.repeat_mode == 2 && player.repeat != repeat.TRACK)
+        ) {
+            player.toggleRepeat();
+        }
+
         lastDate = new Date();
         const position = webPlaybackState.position;
         const duration = webPlaybackState.duration;
@@ -240,8 +259,11 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         if (tracks[current_track.id] == null) {
             addTrack(current_track);
         }
+
+        // Detect when Spotify track stops playing, and make sure the correct next track starts
         if (!spotifyPaused && current_track.id != player.track) {
-            console.log('prev ' + previousTrack + ', current ' + current_track.id + ', next ' + nextTrack);
+            logMessage('🏁 track ' + getNameById(player.track) + ' has finished playing');
+
             // Queue items can either be Nottify or Spotify, but the Spotify queue only contains Spotify tracks
             // Whenever Spotify starts playing a new track, check if this track should be played according to the full Nottify+Spotify queue
 
@@ -263,14 +285,19 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 player.queuePrevious(isNextItemSpotify);
             }
             if (isNextItemSpotify) {
+                logMessage('▶️ ' + ((tracks[current_track.id] && tracks[current_track.id].meta && tracks[current_track.id].meta.title) ? tracks[current_track.id].meta.title : current_track.id), 'color: #5a5cfd;');
                 player.track = current_track.id;
-                fetch('api/data?track=' + current_track.id + ((current_track.album && current_track.album['name']) ? ('&album=' + current_track.album['name']) : '') + '&duration=' + (duration / 1000) + '&hour=' + (new Date().getHours()) + '&month=' + (new Date().getMonth()));
+                fetch('api/data.php?track=' + current_track.id + ((current_track.album && current_track.album['name']) ? ('&album=' + current_track.album['name']) : '') + '&duration=' + (duration / 1000) + '&hour=' + (new Date().getHours()) + '&month=' + (new Date().getMonth()));
             }
             if (lyricsTab.classList.contains('open')) {
-                setTimeout(displayLyrics, 100);
+                setTimeout(openLyrics, 100);
             }
             previousTrack = webPlaybackState.track_window.previous_tracks[0]?.id;
             nextTrack = webPlaybackState.track_window.next_tracks[0]?.id;
+        }
+        else if (webPlaybackState.repeat_mode == 0 && webPlaybackState.track_window.next_tracks.length == 0 && webPlaybackState.paused && webPlaybackState.position == 0 && player.track && current_track && current_track.id && player.queue.length != 0) {
+            logMessage('🏁 track ' + getNameById(player.track) + ' has finished playing');
+            player.queueNext();
         }
         updateMediaSession(player.track);
         updateExtraInfoPanel();

@@ -2,11 +2,8 @@
 // Get someones now playing track with Last.fm. Returns HTML.
 require_once '../config.php';
 
-if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) || !$lastfm['enabled']) {
-    exitMessage('Last.fm is disabled', 'The instance owner has disabled the Last.fm integration.');
-}
-if (!isset($_SESSION['lastfm_user'], $_GET['q'])) {
-    exitMessage('No Last.fm connection', 'You\'ve not yet connected your Last.fm account.');
+if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) || !$lastfm['enabled'] || !isset($_SESSION['lastfm_user'], $_GET['q'])) {
+    exitMessage(text('error'), text('lastfm_disabled'));
 }
 
 function getDateString($time)
@@ -46,9 +43,9 @@ if (empty($result) || !empty($result['error'])) {
     if (isset($result, $result['error']) && $result['error'] == 17) {
         // Error 17 means user has disabled recent track listing on their profile
         // When developing this I actually got this error for my own profile, because I actually had disabled it
-        exit('<p>This person has track listing disabled.</p>');
+        exit('<p>' . text('track_listing_disabled') . '</p>');
     } else {
-        exit('<p>Unexpected response from Last.fm' . (isset($result, $result['error']) ? ' (' . filter_var($result['error'], FILTER_SANITIZE_SPECIAL_CHARS) . ')' : '') . '</p>');
+        exit('<p>' . text('unexpected_response') . (isset($result, $result['error']) ? ' (' . filter_var($result['error'], FILTER_SANITIZE_SPECIAL_CHARS) . ')' : '') . '</p>');
     }
 }
 

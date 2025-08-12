@@ -3,7 +3,7 @@
 require_once 'config.php';
 
 if (!isset($spotify, $spotify['enabled'], $spotify['client_id'], $spotify['client_secret'], $spotify['redirect_uri']) || !$spotify['enabled']) {
-    exitMessage('Spotify is disabled', 'The instance owner has disabled the Spotify integration.');
+    exitMessage(text('error'), text('spotify_disabled'));
 }
 
 if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
@@ -12,10 +12,11 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
     unset($_SESSION['spotify_expires']);
     unset($_SESSION['spotify_time']);
     unset($_SESSION['spotify_state']);
-    exitMessage('Success', 'Your Spotify connection has been deleted.');
+    unset($_SESSION['spotify_progress']);
+    exitMessage(text('success'), str_replace('<service>', 'Spotify', text('account_deleted')), ['href' => './', 'text' => text('back_to_nottify')]);
 } else if (!empty($_GET['code'])) {
     if (empty($_GET['state']) || empty($_SESSION['spotify_state']) || $_GET['state'] != $_SESSION['spotify_state']) {
-        exitMessage('State error', 'The given state does not match the previously generated state.', ['href' => 'spotify', 'text' => 'Try again']);
+        exitMessage(text('state_error'), text('state_error_description'), ['href' => 'spotify', 'text' => text('try_again')]);
     } else {
         $post_data = [
             'code' => $_GET['code'],
@@ -30,18 +31,21 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
                 'content-type: application/x-www-form-urlencoded'
             ]);
             curl_setopt($ch, CURLOPT_USERPWD, $spotify['client_id'] . ':' . $spotify['client_secret']);
+            if (array_key_exists('curl_use_default_cacert', $config) && !$config['curl_use_default_cacert']) {
+                curl_setopt($ch, CURLOPT_CAINFO, str_replace('\\', '/', dirname(__FILE__)) . '/resources/cacert.pem');
+            }
             if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
             }
             $output = curl_exec($ch);
             if ($output === false) {
-                exitMessage('Curl error', curl_error($ch));
+                exitMessage(text('curl_error'), curl_error($ch));
             }
 
             $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             if ($status < 200 || $status >= 300) {
-                exitMessage('Invalid status code (' . $status . ')', $output);
+                exitMessage(str_replace('<status>', $status, text('invalid_status_code')), $output);
             }
 
             $result = json_decode($output, true);
@@ -50,53 +54,27 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
             $expiresIn = $result['expires_in'];
 
             if (empty($accessToken)) {
-                exitMessage('Could not retrieve access token', $output);
+                exitMessage(text('unexpected_response'), $output);
             }
 
             $_SESSION['spotify_token'] = $accessToken;
             $_SESSION['spotify_refresh'] = $refreshToken;
             $_SESSION['spotify_expires'] = $expiresIn;
             $_SESSION['spotify_time'] = time();
+            $_SESSION['spotify_progress'] = 0;
             unset($_SESSION['spotify_state']);
 
-            $content = file_get_contents('library/albums.json', true);
-            if (!json_validate($content)) {
-                exitMessage('error', 'Invalid albums.json');
-            }
-            $albums = json_decode($content, true);
-
-            $content = file_get_contents('library/tracks.json', true);
-            if (!json_validate($content)) {
-                exitMessage('error', 'Invalid tracks.json');
-            }
-            $tracks = json_decode($content, true);
-
-            $profile = requestURL('https://api.spotify.com/v1/me', 'spotify');
-            $json = requestURL('https://api.spotify.com/v1/me/playlists?offset=0&limit=50', 'spotify');
-            addAlbums($json);
-
-            $json = requestURL('https://api.spotify.com/v1/me/albums?offset=0&limit=50', 'spotify');
-            addAlbums($json);
-
-            $json = requestURL('https://api.spotify.com/v1/me/tracks?offset=0&limit=50', 'spotify');
-            addTracks(['id' => 'favorites', 'name' => 'favorites', 'images' => []], $json);
-            for ($i = 0; $i < floor($json['total'] / 50); $i++) {
-                $json = requestURL('https://api.spotify.com/v1/me/tracks?offset=' . (($i + 1) * 50) . '&limit=50', 'spotify');
-                addTracks(['id' => 'favorites', 'name' => 'favorites', 'images' => []], $json);
-            }
-
-            write_file('library/tracks.json', json_encode($tracks));
-            write_file('library/albums.json', json_encode($albums));
-            exitMessage('Success', 'Your Spotify account has been added.', ['href' => './', 'text' => 'Back to nottify']);
+            http_response_code(303);
+            header('Location: import-spotify-library');
         } catch (Exception $e) {
-            exitMessage('Error', sprintf('Curl failed with error #%d: %s', $e->getCode(), $e->getMessage()));
+            exitMessage(text('curl_error'), $e->getCode() . ', ' . $e->getMessage());
         }
     }
 } else if (!empty($_GET['error'])) {
     if ($_GET['error'] == 'access_denied') {
-        exitMessage('Access denied', 'Changed your mind? No problem. Your Spotify account has not been connected to nottify.');
+        exitMessage(text('access_denied'), str_replace('<service>', 'Spotify', text('access_denied')));
     } else {
-        exitMessage('Error', 'Something happened (' + $_GET['error'] + ')');
+        exitMessage(text('error'), text('unexpected_response') . ' ' . $_GET['error']);
     }
 } else {
     $_SESSION['spotify_state'] = substr(str_shuffle(str_repeat($x = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', ceil(16 / strlen($x)))), 1, 16);

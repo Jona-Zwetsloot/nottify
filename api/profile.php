@@ -2,7 +2,7 @@
 // Get profile info and stats. Returns HTML.
 require_once '../config.php';
 
-$spotifyEnabled = isset($spotify) && $spotify['enabled'] && !empty($_SESSION['spotify_token']);
+$spotifyEnabled = isset($spotify, $spotify['enabled'], $spotify['client_id'], $spotify['client_secret'], $spotify['redirect_uri']) && $spotify['enabled'] && !empty($_SESSION['spotify_token']);
 if ($spotifyEnabled) {
     $spotifyProfile = requestURL('https://api.spotify.com/v1/me', 'spotify');
 }
@@ -10,17 +10,20 @@ $profilePicture = (isset($spotifyProfile, $spotifyProfile['images'], $spotifyPro
 
 $content = file_get_contents('../library/data.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid data.json']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => str_replace('<file>', 'data.json', text('invalid_json'))]));
 }
 $data = json_decode($content, true);
 $content = file_get_contents('../library/tracks.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid tracks.json']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => str_replace('<file>', 'tracks.json', text('invalid_json'))]));
 }
 $tracks = json_decode($content, true);
 $content = file_get_contents('../library/albums.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid albums.json']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => str_replace('<file>', 'albums.json', text('invalid_json'))]));
 }
 $albums = json_decode($content, true);
 
@@ -85,26 +88,26 @@ foreach ($data['listened_tracks'] as $track) {
         }
     }
 }
-write_file('../library/data.json', json_encode($data));
+writeFile('../library/data.json', json_encode($data));
 arsort($trackCount);
 arsort($artistCount);
 
-echo '<div class="stats"><div><div><h3>' . $i . '</h3><p>' . text('streams') . '</p></div><div><h3>' . floor($totalDuration / 60) . '</h3><p>' . text('minutes_streamed') . '</p></div><div><h3>' . floor($totalDuration / 60 / 60) . '</h3><p>' . text('hours_streamed') . '</p></div><div><h3>' . count($artistCount) . '</h3><p>' . text('different_artists') . '</p></div><div><h3>' . count($trackCount) . '</h3><p>' . text('different_tracks') . '</p></div><div><h3>' . count($albumCount) . '</h3><p>' . text('different_albums') . '</p></div></div><select class="button"><option' . ($range == 'day' ? ' selected' : '') . ' value="day">' . text('today') . '</option><option' . ($range == 'week' ? ' selected' : '') . ' value="week">' . text('week') . '</option><option' . ($range == 'four-weeks' ? ' selected' : '') . ' value="four-weeks">' . text('4_weeks') . '</option><option' . ($range == 'six-months' ? ' selected' : '') . ' value="six-months">' . text('6 months') . '</option><option' . ($range == 'year' ? ' selected' : '') . ' value="year">' . text('1_year') . '</option><option' . ($range == 'lifetime' ? ' selected' : '') . ' value="lifetime">' . text('lifetime') . '</option></select></div>';
+echo '<div class="stats fadein"><div><div><h3>' . $i . '</h3><p>' . ($i == 1 ? text('stream') : text('streams')) . '</p></div><div><h3>' . floor($totalDuration / 60) . '</h3><p>' . (floor($totalDuration / 60) == 1 ? text('minute_streamed') : text('minutes_streamed')) . '</p></div><div><h3>' . floor($totalDuration / 60 / 60) . '</h3><p>' . (floor($totalDuration / 60 / 60) == 1 ? text('hour_streamed') : text('hours_streamed')) . '</p></div><div><h3>' . count($artistCount) . '</h3><p>' . (count($artistCount) == 1 ? text('different_artist') : text('different_artists')) . '</p></div><div><h3>' . count($trackCount) . '</h3><p>' . (count($trackCount) == 1 ? text('different_track') : text('different_tracks')) . '</p></div><div><h3>' . count($albumCount) . '</h3><p>' . (count($albumCount) == 1 ? text('different_album') : text('different_albums')) . '</p></div></div><select class="button"><option' . ($range == 'day' ? ' selected' : '') . ' value="day">' . text('today') . '</option><option' . ($range == 'week' ? ' selected' : '') . ' value="week">' . text('week') . '</option><option' . ($range == 'four-weeks' ? ' selected' : '') . ' value="four-weeks">' . text('4_weeks') . '</option><option' . ($range == 'six-months' ? ' selected' : '') . ' value="six-months">' . text('6 months') . '</option><option' . ($range == 'year' ? ' selected' : '') . ' value="year">' . text('1_year') . '</option><option' . ($range == 'lifetime' ? ' selected' : '') . ' value="lifetime">' . text('lifetime') . '</option></select></div>';
 
 if (!empty($trackCount)) {
-    echo '<div class="section"><div><h1>' . text('top_tracks') . '</h1><h3>' . str_replace('<count>', count($data['listened_tracks']), text('top_tracks_description')) . '</h3></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
+    echo '<div class="fadein"><div class="section"><div><h1>' . text('top_tracks') . '</h1><h3>' . str_replace('<count>', count($data['listened_tracks']), text('top_tracks_description')) . '</h3></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
 
     $i = 1;
     foreach ($trackCount as $key => $value) {
-        echo '<div onclick="player.play(\'' . filter_var(str_replace('\'', '\\\'', $key), FILTER_SANITIZE_SPECIAL_CHARS) . '\');"><img loading="lazy" src="' . filter_var(isset($tracks[$key]['pictures'][0], $tracks[$key]['pictures'][0]['url']) ? $tracks[$key]['pictures'][0]['url'] : 'svg/placeholder.svg', FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . $i . '. ' . filter_var($tracks[$key]['meta']['title'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . $value . ' streams</p></div>';
+        echo '<div onclick="player.play(\'' . filter_var(str_replace('\'', '\\\'', $key), FILTER_SANITIZE_SPECIAL_CHARS) . '\');"><img loading="lazy" src="' . filter_var(isset($tracks[$key]['pictures'][0], $tracks[$key]['pictures'][0]['url']) ? $tracks[$key]['pictures'][0]['url'] : 'svg/placeholder.svg', FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . $i . '. ' . filter_var($tracks[$key]['meta']['title'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . $value . ' ' . ($value == 1 ? text('stream') : text('streams')) . '</p></div>';
         $i++;
     }
-    echo '</div></div>';
+    echo '</div></div></div>';
 }
 
 
 if (!empty($artistCount)) {
-    echo '<div class="section"><div><h1>' . text('top_artists') . '</h1><h3>' . str_replace('<count>', count($data['listened_tracks']), text('top_artists_description')) . '</h3></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(3px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel carrousel-rounded"><div>';
+    echo '<div class="fadein"><div class="section"><div><h1>' . text('top_artists') . '</h1><h3>' . str_replace('<count>', count($data['listened_tracks']), text('top_artists_description')) . '</h3></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(3px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel carrousel-rounded"><div>';
     $i = 1;
     foreach ($artistCount as $key => $value) {
         $artist = ['picture' => 'svg/placeholder.svg'];
@@ -113,18 +116,19 @@ if (!empty($artistCount)) {
         if (file_exists($artistFile)) {
             $content = file_get_contents($artistFile, true);
             if (!json_validate($content)) {
-                exit(json_encode(['error' => 'Invalid artist JSON']));
+                header('Content-type: application/json');
+                exit(json_encode(['error' => str_replace('<file>', preg_replace($config['folder_regex'], '', $key) . '.json', text('invalid_json'))]));
             }
             $artist = json_decode($content, true);
         }
-        echo '<div onclick="openArtist(\'' . filter_var(str_replace('\'', '\\\'', $key), FILTER_SANITIZE_SPECIAL_CHARS) . '\')"><img loading="lazy" src="' . filter_var($artist['picture'], FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . $i . '. ' . filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . $value . ' streams</p></div>';
+        echo '<div onclick="openArtist(\'' . filter_var(str_replace('\'', '\\\'', $key), FILTER_SANITIZE_SPECIAL_CHARS) . '\')"><img loading="lazy" src="' . filter_var($artist['picture'], FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . $i . '. ' . filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . $value . ' ' . ($value == 1 ? text('stream') : text('streams')) . '</p></div>';
         $i++;
     }
-    echo '</div></div>';
+    echo '</div></div></div>';
 }
 
 if (max($hourDistribution) != 0) {
-    echo '<div class="section"><div><h1>' . text('listening_clocks') . '</h1><h3>' . text('listening_clocks_description') . '</h3></div></div><div id="clocks">';
+    echo '<div class="fadein"><div class="section"><div><h1>' . text('listening_clocks') . '</h1><h3>' . text('listening_clocks_description') . '</h3></div></div><div id="clocks">';
     echo '<div class="clock" style="--rotation-offset: 15;"><div class="inner">';
     for ($i = 0; $i < 24; $i++) {
         echo '<div style="--child: ' . $i . ';">' . ($i % 6 == 0 ? '<span class="pos-' . ($i == 0 ? 'top' : ($i == 6 ? 'right' : ($i == 12 ? 'bottom' : 'left'))) . '">' . $i . '</span>' : '') . '</div>';
@@ -132,7 +136,7 @@ if (max($hourDistribution) != 0) {
     echo '</div><div class="outer">';
     $i = 0;
     foreach ($hourDistribution as $streamsInHour) {
-        echo '<div style="--child: ' . $i . ';--fill-percentage: ' . ($streamsInHour / max($hourDistribution) * 100) . '%;' . ($streamsInHour == 0 ? 'visibility: hidden;' : '') . '"><div data-title="' . $i . ':00 - ' . ($i + 1) . ':00: ' . $streamsInHour . ' streams"></div></div>';
+        echo '<div style="--child: ' . $i . ';--fill-percentage: ' . ($streamsInHour / max($hourDistribution) * 100) . '%;' . ($streamsInHour == 0 ? 'visibility: hidden;' : '') . '"><div data-title="' . $i . ':00 - ' . ($i + 1) . ':00: ' . $streamsInHour . ' ' . ($streamsInHour == 1 ? text('stream') : text('streams')) . '"></div></div>';
         $i++;
     }
     echo '</div></div>';
@@ -177,16 +181,16 @@ if (max($hourDistribution) != 0) {
         echo '</div><div class="outer">';
         $i = 0;
         foreach ($monthDistribution as $streamsInMonth) {
-            echo '<div style="--child: ' . $i . ';--fill-percentage: ' . ($streamsInMonth / max($monthDistribution) * 100) . '%;' . ($streamsInMonth == 0 ? 'visibility: hidden;' : '') . '"><div data-title="' . intToMonth($i) . ': ' . $streamsInMonth . ' streams"></div></div>';
+            echo '<div style="--child: ' . $i . ';--fill-percentage: ' . ($streamsInMonth / max($monthDistribution) * 100) . '%;' . ($streamsInMonth == 0 ? 'visibility: hidden;' : '') . '"><div data-title="' . intToMonth($i) . ': ' . $streamsInMonth . ' ' . ($streamsInMonth == 1 ? text('stream') : text('streams')) . '"></div></div>';
             $i++;
         }
         echo '</div></div>';
     }
-    echo '</div>';
+    echo '</div></div>';
 }
 
 if (!empty($trackCount)) {
-    echo '<div class="section"><div><h1>' . text('recent_tracks') . '</h1><h3>' . text('recent_tracks_description') . '</h3></div></div>';
+    echo '<div class="fadein"><div class="section"><div><h1>' . text('recent_tracks') . '</h1><h3>' . text('recent_tracks_description') . '</h3></div></div>';
     $i = 0;
     foreach ($data['listened_tracks'] as $track) {
         $i++;
@@ -203,17 +207,22 @@ if (!empty($trackCount)) {
         $id = $track['track'];
         echo '<div class="album no-album-but-actually-track" data-id="' . filter_var($id, FILTER_SANITIZE_SPECIAL_CHARS) . '"><img loading="lazy" src="' . filter_var(isset($tracks[$id]['pictures'][0]) ? ($tracks[$id]['pictures'][0]['url'] . '?v=' . $tracks[$id]['pictures'][0]['version']) : 'svg/placeholder.svg', FILTER_SANITIZE_SPECIAL_CHARS) . '"><div><h3>' . filter_var(isset($tracks[$id]['meta'], $tracks[$id]['meta']['title']) ? $tracks[$id]['meta']['title'] : text('unknown_title'), FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . filter_var(isset($tracks[$id]['meta'], $tracks[$id]['meta']['artist']) ? $tracks[$id]['meta']['artist'] : text('unknown_artist'), FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div></div>';
     }
+    echo '</div>';
 }
 
-echo '<br><h3>' . text('connection') . '</h3><div class="button-flex-container">';
+$spotifyAvailable = isset($spotify, $spotify['enabled'], $spotify['client_id'], $spotify['client_secret'], $spotify['redirect_uri']) && $spotify['enabled'];
+$lastFmAvailable = isset($lastfm, $lastfm['enabled'], $lastfm['apikey'], $lastfm['secret']) && $lastfm['enabled'];
+if ($spotifyAvailable || $lastFmAvailable) {
+    echo '<br><div class="fadein"><div class="section"><div><h1>' . text('connection') . '</h1><h3>' . text('connection_description') . '</h3></div></div><div class="button-flex-container">';
 
-if (isset($spotify) && $spotify['enabled']) {
-    $connect = empty($_SESSION['spotify_token']);
-    echo '<a href="spotify.php' . ($connect ? '' : '?disconnect=true') . '" class="button button-flex"><img src="svg/spotify.svg"><p>' . text(($connect ? 'connect' : 'disconnect') . '_spotify') . '</p></a>';
-}
-if (isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) && $lastfm['enabled']) {
-    $connect = empty($_SESSION['lastfm_token']);
-    echo '<a href="lastfm.php' . ($connect ? '' : '?disconnect=true') . '" class="button button-flex"><img src="svg/lastfm.svg"><p>' . text(($connect ? 'connect' : 'disconnect') . '_lastfm') . '</p></a>';
-}
+    if ($spotifyAvailable) {
+        $connect = empty($_SESSION['spotify_token']);
+        echo '<a href="spotify.php' . ($connect ? '' : '?disconnect=true') . '" class="button button-flex"><img src="svg/spotify.svg"><p>' . text(($connect ? 'connect' : 'disconnect') . '_spotify') . '</p></a>';
+    }
+    if ($lastFmAvailable) {
+        $connect = empty($_SESSION['lastfm_token']);
+        echo '<a href="lastfm.php' . ($connect ? '' : '?disconnect=true') . '" class="button button-flex"><img src="svg/lastfm.svg"><p>' . text(($connect ? 'connect' : 'disconnect') . '_lastfm') . '</p></a>';
+    }
 
-echo '</div>';
+    echo '</div></div>';
+}

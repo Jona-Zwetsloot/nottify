@@ -6,12 +6,12 @@ if (!file_exists('library')) {
     mkdir('library', 0777, true);
 }
 if (!file_exists('library/tracks.json')) {
-    write_file('library/tracks.json', '[]');
+    writeFile('library/tracks.json', '[]');
 }
 if (!file_exists('library/albums.json')) {
     $albums = [
         'all_tracks' => [
-            'name' => 'All tracks',
+            'name' => null,
             'picture' => [
                 'url' => 'svg/all.svg',
                 'mime' => 'image\/svg',
@@ -24,7 +24,7 @@ if (!file_exists('library/albums.json')) {
             'version' => 1
         ],
         'favorites' => [
-            'name' => 'Favorites',
+            'name' => null,
             'picture' => [
                 'url' => 'svg/favorites.svg',
                 'mime' => 'image\/svg',
@@ -37,7 +37,7 @@ if (!file_exists('library/albums.json')) {
             'version' => 1
         ],
         'disconnected' => [
-            'name' => 'Disconnected',
+            'name' => null,
             'picture' => [
                 'url' => 'svg/disconnected.svg',
                 'mime' => 'image\/svg',
@@ -50,10 +50,10 @@ if (!file_exists('library/albums.json')) {
             'version' => 1
         ]
     ];
-    write_file('library/albums.json', json_encode($albums));
+    writeFile('library/albums.json', json_encode($albums));
 }
 if (!file_exists('library/data.json')) {
-    write_file('library/data.json', json_encode([
+    writeFile('library/data.json', json_encode([
         'recent_albums' => []
     ]));
 }
@@ -64,7 +64,7 @@ if (!file_exists('library/data.json')) {
 
 <?php
 // Attribution, required for license. Do not remove. 
-echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_SPECIAL_CHARS) . '. see https://github.com/Jona-Zwetsloot/nottify -->';
+echo '<!-- ' . str_replace('<host>', filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_SPECIAL_CHARS), text('credits')) . ' -->';
 ?>
 
 <head>
@@ -85,13 +85,13 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
     }
     if (!array_key_exists('radio_browser', $config) || $config['radio_browser']) {
         include_once 'api/radio-browser.php';
-        if (file_exists('cache/radio-browser-baseurl.txt')) {
-            $baseURL = file_get_contents('cache/radio-browser-baseurl.txt', true);
+        if (file_exists('cache/radio-browser/baseurl.txt')) {
+            $baseURL = file_get_contents('cache/radio-browser/baseurl.txt', true);
         } else {
             getBaseURL();
         }
     }
-    $spotifyEnabled = isset($spotify) && $spotify['enabled'] && !empty($_SESSION['spotify_token']);
+    $spotifyEnabled = isset($spotify, $spotify['enabled'], $spotify['client_id'], $spotify['client_secret'], $spotify['redirect_uri']) && $spotify['enabled'] && !empty($_SESSION['spotify_token']);
     if ($spotifyEnabled) {
         require_once 'api/refresh-token.php';
         $spotifyProfile = requestURL('https://api.spotify.com/v1/me', 'spotify');
@@ -131,7 +131,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
         </button>
         <?php
         if (!array_key_exists('uploads_enabled', $config) || $config['uploads_enabled']) {
-            echo '<button id="add-track"><img src="svg/plus.svg"><p>' . text('upload_track') . '</p></button>';
+            echo '<button id="add-track"><img src="svg/plus.svg"><p>' . text('upload_tracks') . '</p></button>';
         }
         if (!array_key_exists('change_metadata_enabled', $config) || $config['change_metadata_enabled']) {
             echo '<button id="add-album"><img src="svg/library.svg"><p></p></button>';
@@ -142,8 +142,13 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
             <p></p>
         </button>
     </div>
-    <button id="back"></button>
-    <div id="top-menu"><img id="logo" src="svg/nottify.svg"><input id="search" placeholder="<?php echo text('search') . '...'; ?>" class="search" type="text"><button id="friend-btn"></button><img id="user-profile-picture" src="<?php echo $profilePicture; ?>"></div>
+    <div id="back-menu">
+        <button id="back"></button>
+        <p></p><button id="more"></button>
+    </div>
+    <div id="top-menu"><img id="logo" src="svg/nottify.svg"><input id="search" placeholder="<?php echo text('search') . '...'; ?>" class="search" type="text"><?php if (isset($lastfm, $lastfm['enabled'], $lastfm['apikey'], $lastfm['secret']) && $lastfm['enabled']) {
+                                                                                                                                                                    echo '<button id="friend-btn"></button>';
+                                                                                                                                                                } ?><img id="user-profile-picture" src="<?php echo $profilePicture; ?>"></div>
     <div id="main">
         <div id="left-panel">
             <div>
@@ -169,17 +174,17 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
 
                 $content = file_get_contents('library/data.json', true);
                 if (!json_validate($content)) {
-                    exitMessage('error', 'Invalid data.json');
+                    exitMessage('error', str_replace('<file>', 'data.json', text('invalid_json')));
                 }
                 $data = json_decode($content, true);
                 $content = file_get_contents('library/tracks.json', true);
                 if (!json_validate($content)) {
-                    exitMessage('error', 'Invalid tracks.json');
+                    exitMessage('error', str_replace('<file>', 'tracks.json', text('invalid_json')));
                 }
                 $tracks = json_decode($content, true);
                 $content = file_get_contents('library/albums.json', true);
                 if (!json_validate($content)) {
-                    exitMessage('error', 'Invalid albums.json');
+                    exitMessage('error', str_replace('<file>', 'albums.json', text('invalid_json')));
                 }
                 $albums = json_decode($content, true);
 
@@ -200,7 +205,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
                 }
 
                 echo '<div id="feed">';
-                echo '<div id="recent-albums">';
+                echo '<div id="recent-albums" class="fadein">';
                 $i = 1;
                 foreach ($data['recent_albums'] as $album) {
                     if ($i > 8) {
@@ -211,7 +216,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
                         if (!empty($albums[$album]['picture'])) {
                             $image = $albums[$album]['picture']['url'] . '?v=' . $albums[$album]['picture']['version'];
                         }
-                        echo '<button data-id="' . filter_var($album, FILTER_SANITIZE_SPECIAL_CHARS) . '"><img loading="lazy" src="' . filter_var($image, FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . filter_var($albums[$album]['name'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><div class="play" data-id="' . filter_var($album, FILTER_SANITIZE_SPECIAL_CHARS) . '"></div></button>';
+                        echo '<button data-id="' . filter_var($album, FILTER_SANITIZE_SPECIAL_CHARS) . '"><img loading="lazy" src="' . filter_var($image, FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . filter_var($albums[$album]['name'] == null ? text($album) : $albums[$album]['name'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><div class="play" data-id="' . filter_var($album, FILTER_SANITIZE_SPECIAL_CHARS) . '"></div></button>';
                     }
                     $i++;
                 }
@@ -226,11 +231,11 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
                             foreach ($album['artists'] as $artist) {
                                 array_push($artists, $artist['name']);
                             }
-                            echo '<div class="tile spotify-content" data-id="' . filter_var($album['id'], FILTER_SANITIZE_SPECIAL_CHARS) . '"><img loading="lazy" src="' . filter_var('api/image-proxy?url=' . rawurlencode($album['images'][0]['url']), FILTER_SANITIZE_SPECIAL_CHARS) . '"><div><h3>' . filter_var($album['name'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . filter_var(implode(', ', $artists), FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div><div><div class="play" data-id="' . filter_var($album['id'], FILTER_SANITIZE_SPECIAL_CHARS) . '"></div></div></div>';
+                            echo '<div class="tile spotify-content fadein" data-id="' . filter_var($album['id'], FILTER_SANITIZE_SPECIAL_CHARS) . '"><img loading="lazy" src="' . filter_var('api/image-proxy?url=' . rawurlencode($album['images'][0]['url']), FILTER_SANITIZE_SPECIAL_CHARS) . '"><div><h3>' . filter_var($album['name'], FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . filter_var(implode(', ', $artists), FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div><div><div class="play" data-id="' . filter_var($album['id'], FILTER_SANITIZE_SPECIAL_CHARS) . '"></div></div></div>';
                         }
                     }
-                    write_file('library/tracks.json', json_encode($tracks));
-                    write_file('library/albums.json', json_encode($albums));
+                    writeFile('library/tracks.json', json_encode($tracks));
+                    writeFile('library/albums.json', json_encode($albums));
                     echo '</div>';
                 }
 
@@ -248,7 +253,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
                 <div id="upload-lyrics"><img src="svg/not_found.svg">
                     <h2><?php echo text('add_lyrics'); ?></h2><button class="button" id="paste-lyrics"><?php echo text('paste_lyrics'); ?></button><label class="button" for="lrc-upload"><?php echo text('upload_lrc'); ?></label><button class="button" id="lrclib-lookup"><?php echo text('lrclib_lookup'); ?></button><input id="lrc-upload" type="file" accept=".lrc, .txt">
                 </div>
-                <div id="lyric-container"></div>
+                <div class="lyrics"></div>
             </div>
             <div id="artist-tab"></div>
             <div id="profile-tab">
@@ -269,6 +274,11 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
                     <input type="text">
                 </div>
                 <div id="metadata"></div>
+                <div id="lyric-preview" class="lyrics"></div>
+                <div id="artist-bio" style="display: none;"><img src="svg/placeholder.svg">
+                    <h3>Name</h3>
+                    <div></div>
+                </div>
             </div>
         </div>
         <div id="queue-list">
@@ -323,7 +333,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
             <button id="fullscreen"></button>
         </div>
     </div>
-    <div id="mobile-navbar"><button></button><button></button><button></button></div>
+    <div id="mobile-navbar"><button><?php echo text('home'); ?></button><button><?php echo text('queue'); ?></button><button><?php echo text('library'); ?></button></div>
     <div id="notification-container"></div>
     <script>
         let tracks = <?php echo json_encode($tracks); ?>;
@@ -332,6 +342,7 @@ echo '<!-- a nottify instance at ' . filter_var($_SERVER['HTTP_HOST'], FILTER_SA
     <script>
         let translations = <?php echo $translationJSON; ?>;
     </script>
+    <script src="resources/lib/color-thief.umd.js"></script>
     <script src="resources/player.js"></script>
     <script src="resources/script.js"></script>
     <script src="resources/upload.js"></script>

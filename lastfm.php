@@ -1,33 +1,36 @@
 <?php
 require_once 'config.php';
 
-if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) || !$lastfm['enabled']) {
-    exitMessage('Last.fm is disabled', 'The instance owner has disabled the Last.fm integration.');
+if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey'], $lastfm['secret']) || !$lastfm['enabled']) {
+    exitMessage(text('error'), text('lastfm_disabled'));
 }
 if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
     unset($_SESSION['lastfm_token']);
     unset($_SESSION['lastfm_user']);
     unset($_SESSION['lastfm_subscribers']);
-    exitMessage('Success', 'Your Last.fm connection has been deleted.');
+    exitMessage(text('success'), str_replace('<service>', 'Last.fm', text('account_deleted')), ['href' => './', 'text' => text('back_to_nottify')]);
 } else if (!empty($_GET['token'])) {
+    $signature = md5('api_key' . $lastfm['apikey'] . 'methodauth.getSessiontoken' . $_GET['token'] . $lastfm['secret']);
+    $url = 'https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=' . rawurlencode($lastfm['apikey']) . '&token=' . rawurlencode($_GET['token']) . '&api_sig=' . rawurlencode($signature) . '&format=json';
     try {
-        $signature = md5('api_key' . $lastfm['apikey'] . 'methodauth.getSessiontoken' . $_GET['token'] . $lastfm['secret']);
-
-        $ch = curl_init('https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=' . rawurlencode($lastfm['apikey']) . '&token=' . rawurlencode($_GET['token']) . '&api_sig=' . rawurlencode($signature) . '&format=json');
+        $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, $config['useragent']);
+        if (array_key_exists('curl_use_default_cacert', $config) && !$config['curl_use_default_cacert']) {
+            curl_setopt($ch, CURLOPT_CAINFO, str_replace('\\', '/', dirname(__FILE__)) . '/resources/cacert.pem');
+        }
         if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         }
         $output = curl_exec($ch);
         if ($output === false) {
-            exitMessage('Curl error', curl_error($ch));
+            exitMessage(text('curl_error'), curl_error($ch));
         }
 
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if ($status < 200 || $status >= 300) {
-            exitMessage('Invalid status code (' . $status . ')', $output);
+            exitMessage(str_replace('<status>', $status, text('invalid_status_code')), $output);
         }
 
         $result = json_decode($output, true);
@@ -35,18 +38,18 @@ if (isset($_GET['disconnect']) && $_GET['disconnect'] == 'true') {
             $_SESSION['lastfm_token'] = $result['session']['key'];
             $_SESSION['lastfm_user'] = $result['session']['name'];
             $_SESSION['lastfm_subscribers'] = $result['session']['subscriber'];
-            exitMessage('Success', 'Your Last.fm account has been added.', ['href' => './', 'text' => 'Back to nottify']);
+            exitMessage(text('success'), str_replace('<service>', 'Last.fm', text('account_added')), ['href' => './', 'text' => text('back_to_nottify')]);
         } else {
-            exitMessage('Could not retrieve session key', $output);
+            exitMessage(text('unexpected_response'), $output);
         }
     } catch (Exception $e) {
-        exitMessage('Error', sprintf('Curl failed with error #%d: %s', $e->getCode(), $e->getMessage()));
+        exitMessage(text('curl_error'), $e->getCode() . ', ' . $e->getMessage());
     }
 } else if (!empty($_GET['error'])) {
     if ($_GET['error'] == 'access_denied') {
-        exitMessage('Access denied', 'Changed your mind? No problem. Your Last.fm account has not been connected to nottify.');
+        exitMessage(text('access_denied'), str_replace('<service>', 'Last.fm', text('access_denied')));
     } else {
-        exitMessage('Error', 'Something happened (' + $_GET['error'] + ')');
+        exitMessage(text('error'), text('unexpected_response') . ' ' . $_GET['error']);
     }
 } else {
     http_response_code(303);

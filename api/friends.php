@@ -3,7 +3,7 @@
 require_once '../config.php';
 
 if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) || !$lastfm['enabled']) {
-    exit('Last.fm is disabled. The instance owner has disabled the Last.fm integration.');
+    exit(text('lastfm_disabled'));
 }
 if (!isset($_SESSION['lastfm_user'])) {
     exit('<div class="empty"><a href="lastfm.php" class="button button-flex"><img src="svg/lastfm.svg"><p>' . text('connect_lastfm') . '</p></a></div>');

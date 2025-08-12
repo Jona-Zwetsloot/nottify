@@ -4,11 +4,11 @@ require_once '../config.php';
 header('Content-type: application/json');
 
 if (!isset($lastfm, $lastfm['enabled'], $lastfm['apikey']) || !$lastfm['enabled'] || !isset($_SESSION['lastfm_user'], $_SESSION['lastfm_token'], $_GET['artist'], $_GET['track'])) {
-    exit(json_encode(['error' => 'Invalid request.']));
+    exit(json_encode(['error' => text('invalid_request')]));
 }
 
 if (array_key_exists('lastfm_scrobble', $config) && !$config['lastfm_scrobble']) {
-    exit(json_encode(['error' => 'No scrobbling.']));
+    exit(json_encode(['error' => text('scrobbling_disabled')]));
 }
 
 try {
@@ -38,6 +38,9 @@ try {
         'content-type: application/x-www-form-urlencoded'
     ]);
     curl_setopt($ch, CURLOPT_USERAGENT, $config['useragent']);
+    if (array_key_exists('curl_use_default_cacert', $config) && !$config['curl_use_default_cacert']) {
+        curl_setopt($ch, CURLOPT_CAINFO, str_replace('\\', '/', dirname(__FILE__)) . '/resources/cacert.pem');
+    }
     if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -45,5 +48,5 @@ try {
     $output = curl_exec($ch);
     echo $output;
 } catch (Exception $e) {
-    exit(json_encode(['error' => sprintf('Curl failed with error #%d: %s', $e->getCode(), $e->getMessage())]));
+    exit(json_encode(['error' => text('curl_error') . ': ' . $url . ', ' . $e->getCode() . ', ' . $e->getMessage()]));
 }

@@ -8,13 +8,15 @@ if (empty($_GET['q'])) {
 
 $content = file_get_contents('../library/tracks.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid tracks.json']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => str_replace('<file>', 'tracks.json', text('invalid_json'))]));
 }
 $tracks = json_decode($content, true);
 
 $content = file_get_contents('../library/albums.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid albums.json']));
+    header('Content-type: application/json');
+    exit(json_encode(['error' => str_replace('<file>', 'albums.json', text('invalid_json'))]));
 }
 $albums = json_decode($content, true);
 
@@ -123,13 +125,20 @@ echo '</div>';
 
 if (count($searchArtists) > 0 && (count($searchTracks) == 0 || $searchArtists[0]['priority'] > $searchTracks[0]['priority']) && (count($searchAlbums) == 0 || $searchArtists[0]['priority'] > $searchAlbums[0]['priority'])) {
     $title = $searchArtists[0]['name'];
-    $text = 'Artist';
-    $artist = getArtist($searchArtists[0]['name']);
-    $image = $artist['picture'];
+    $text = ucfirst(text('artist'));
+    $image = 'svg/placeholder.svg';
+    $artistFile = '../cache/artists/' . preg_replace($config['folder_regex'], '', $searchArtists[0]['name']) . '.json';
+    if (file_exists($artistFile)) {
+        $content = file_get_contents($artistFile, true);
+        if (json_validate($content)) {
+            $artist = json_decode($content, true);
+            $image = $artist['picture'];
+        }
+    }
     $click = 'openArtist(\'' . filter_var(str_replace('\'', '\\\'', $searchArtists[0]['name'])) . '\')';
 } else if (count($searchAlbums) > 0 && (count($searchTracks) > 0 || $searchAlbums[0]['priority'] > $searchTracks[0]['priority'])) {
     $title = $albums[$searchAlbums[0]['id']]['name'];
-    $text = 'Album';
+    $text = ucfirst(text('album'));
     $image = isset($albums[$searchAlbums[0]['id']]['picture']) ? ($albums[$searchAlbums[0]['id']]['picture']['url'] . '?v=' . $albums[$searchAlbums[0]['id']]['picture']['version']) : 'svg/placeholder.svg';
     $click = 'openAlbum(\'' . filter_var(str_replace('\'', '\\\'', $searchAlbums[0]['id'])) . '\', true)';
 } else if (count($searchTracks) > 0) {
@@ -140,7 +149,7 @@ if (count($searchArtists) > 0 && (count($searchTracks) == 0 || $searchArtists[0]
 }
 
 if (isset($title)) {
-    echo '<div id="search-flex"><div id="top-result"><h2>Top result</h2><div onclick="' . $click . '"><img src="' . filter_var($image, FILTER_SANITIZE_SPECIAL_CHARS) . '"><h1>' . filter_var($title, FILTER_SANITIZE_SPECIAL_CHARS) . '</h1><p>' . filter_var($text, FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div></div><div id="search-results"><h2>Tracks</h2>';
+    echo '<div id="search-flex"><div id="top-result"><h2>' . text('top_result') . '</h2><div onclick="' . $click . '"><img src="' . filter_var($image, FILTER_SANITIZE_SPECIAL_CHARS) . '"><h1>' . filter_var($title, FILTER_SANITIZE_SPECIAL_CHARS) . '</h1><p>' . filter_var($text, FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div></div><div id="search-results"><h2>Tracks</h2>';
     if (count($searchTracks) > 0) {
         $i = 0;
         foreach ($searchTracks as $track) {
@@ -158,7 +167,7 @@ if (isset($title)) {
 }
 
 if (count($searchTracks) > 0) {
-    echo '<div class="section"><div><h2>Tracks</h2></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
+    echo '<div class="section"><div><h2>' . ucfirst(text('tracks')) . '</h2></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
     foreach ($searchTracks as $track) {
         echo '<div onclick="player.play(\'' . filter_var(str_replace('\'', '\\\'', $track['id']), FILTER_SANITIZE_SPECIAL_CHARS) . '\');"><img loading="lazy" src="' . filter_var(isset($tracks[$track['id']]['pictures'][0]) ? ($tracks[$track['id']]['pictures'][0]['url'] . '?v=' . $tracks[$track['id']]['pictures'][0]['version']) : 'svg/placeholder.svg', FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . filter_var(isset($tracks[$track['id']]['meta'], $tracks[$track['id']]['meta']['title']) ? $tracks[$track['id']]['meta']['title'] : text('unknown_title'), FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>' . filter_var(isset($tracks[$track['id']]['meta'], $tracks[$track['id']]['meta']['artist']) ? $tracks[$track['id']]['meta']['artist'] : text('unknown_artist'), FILTER_SANITIZE_SPECIAL_CHARS) . '</p></div>';
     }
@@ -166,7 +175,7 @@ if (count($searchTracks) > 0) {
 }
 
 if (count($searchAlbums) > 0) {
-    echo '<div class="section"><div><h2>Albums</h2></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
+    echo '<div class="section"><div><h2>' . ucfirst(text('albums')) . '</h2></div><button><img src="svg/grid.svg"></button><button class="small-button"><img src="svg/back.svg" style="transform: translateX(2px)"></button><button class="small-button"><img src="svg/for.svg"></button></div><div class="carrousel"><div>';
     foreach ($searchAlbums as $album) {
         echo '<div onclick="openAlbum(\'' . filter_var(str_replace('\'', '\\\'', $album['id']), FILTER_SANITIZE_SPECIAL_CHARS) . '\', true);"><img loading="lazy" src="' . filter_var(isset($albums[$album['id']]['picture']) ? ($albums[$album['id']]['picture']['url'] . '?v=' . $albums[$album['id']]['picture']['version']) : 'svg/placeholder.svg', FILTER_SANITIZE_SPECIAL_CHARS) . '"><h3>' . filter_var(isset($albums[$album['id']]['name']) ? $albums[$album['id']]['name'] : text('unknown_title'), FILTER_SANITIZE_SPECIAL_CHARS) . '</h3><p>Album</p></div>';
     }

@@ -4,11 +4,11 @@ require_once '../config.php';
 header('Content-type: application/json');
 
 if (array_key_exists('delete_enabled', $config) && !$config['delete_enabled']) {
-    exit(json_encode(['error' => 'Invalid request. Users are not allowed to change metadata.']));
+    exit(json_encode(['error' => text('edits_disabled')]));
 }
 
 if (!file_exists('../library') || !file_exists('../library/tracks.json') || !file_exists('../library/albums.json')) {
-    exit(json_encode(['error' => 'Required files do not exist yet. Please visit the index page first to generate the required files.']));
+    exit(json_encode(['error' => text('required_files_missing')]));
 }
 
 function directoryEmpty($dir)
@@ -31,7 +31,7 @@ function removeTrack($id)
 {
     global $tracks, $config;
     if (!array_key_exists($id, $tracks)) {
-        exit(json_encode(['error' => 'Track could not be found']));
+        exit(json_encode(['error' => text('track_not_found')]));
     }
 
     // Check if file exists and is in allowed directory before deleting it
@@ -65,20 +65,20 @@ if (!empty($_POST['album'])) {
         if (isset($_POST['permanent']) && $_POST['permanent'] == 'true') {
             $content = file_get_contents('../library/tracks.json', true);
             if (!json_validate($content)) {
-                exit(json_encode(['error' => 'Invalid tracks.json']));
+                exit(json_encode(['error' => str_replace('<file>', 'tracks.json', text('invalid_json'))]));
             }
             $tracks = json_decode($content, true);
             foreach ($json[$_POST['album']]['tracks'] as $track) {
                 removeTrack($track);
             }
-            write_file('../library/tracks.json', json_encode($tracks));
+            writeFile('../library/tracks.json', json_encode($tracks));
         }
         unset($json[$_POST['album']]);
 
         if (count($json) == 0) {
             unlink('library/albums.json');
         } else {
-            write_file('../library/albums.json', json_encode($json));
+            writeFile('../library/albums.json', json_encode($json));
         }
     }
 }
@@ -87,7 +87,7 @@ if (!empty($_POST['album'])) {
 if (!empty($_POST['track'])) {
     $content = file_get_contents('../library/tracks.json', true);
     if (!json_validate($content)) {
-        exit(json_encode(['error' => 'Invalid tracks.json']));
+        exit(json_encode(['error' => str_replace('<file>', 'tracks.json', text('invalid_json'))]));
     }
     $tracks = json_decode($content, true);
 
@@ -96,17 +96,17 @@ if (!empty($_POST['track'])) {
     if (count($tracks) == 0) {
         unlink('library/tracks.json');
     } else {
-        write_file('../library/tracks.json', json_encode($tracks));
+        writeFile('../library/tracks.json', json_encode($tracks));
     }
 
     $content = file_get_contents('../library/albums.json', true);
     if (!json_validate($content)) {
-        exit(json_encode(['error' => 'Invalid albums.json']));
+        exit(json_encode(['error' => str_replace('<file>', 'albums.json', text('invalid_json'))]));
     }
     $albums = json_decode($content, true);
     foreach ($albums as $key => $value) {
         $albums[$key]['tracks'] = array_values(array_diff($albums[$key]['tracks'], [$_POST['track']]));
     }
-    write_file('../library/albums.json', json_encode($albums));
+    writeFile('../library/albums.json', json_encode($albums));
 }
 exit(json_encode(['status' => 'success']));

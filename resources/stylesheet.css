@@ -1,13 +1,18 @@
 :root {
+    --left-panel-width: min(350px, 25%);
+    --track-info-and-queue-width: min(300px, 20%);
+}
+
+body {
     color-scheme: light dark;
     --background-normal: light-dark(#fff, #000);
     --background-elevated-weakest: light-dark(#f1f2ff, #252525);
     --background-elevated-weak: light-dark(#0001, #fff2);
-    --background-elevated-normal: light-dark(#bfc2ff, #555555);
+    --background-elevated-normal: light-dark(#bfc2ff, #fff5);
     --background-elevated-strong: light-dark(#5574ff, #fff);
-    --background-gradient-base: light-dark(#e3eaff, #121212);
-    --background-gradient: linear-gradient(light-dark(#fff, #523ba0) 0, light-dark(#e5dfff, #291e51) 300px, light-dark(#dcd3ff, #21173f) 301px, var(--background-gradient-base) 100%);
-    --background-gradient-long: linear-gradient(light-dark(#fff, #523ba0) 0, light-dark(#e5dfff, #291e51) 340px, light-dark(#dcd3ff, #21173f) 341px, var(--background-gradient-base) 100%);
+    --background-gradient-base: light-dark(var(--album-light-gradient-4, #e3eaff), var(--album-dark-gradient-4, #121212));
+    --background-gradient: linear-gradient(light-dark(var(--album-light-gradient-1, #fff), var(--album-dark-gradient-1, #523ba0)) 0, light-dark(var(--album-light-gradient-2, #e5dfff), var(--album-dark-gradient-2, #291e51)) 300px, light-dark(var(--album-light-gradient-3, #dcd3ff), var(--album-dark-gradient-3, #21173f)) 301px, var(--background-gradient-base) 100%);
+    --background-gradient-long: linear-gradient(light-dark(var(--album-light-gradient-1, #fff), var(--album-dark-gradient-1, #523ba0)) 0, light-dark(var(--album-light-gradient-2, #e5dfff), var(--album-dark-gradient-2, #291e51)) 390px, light-dark(var(--album-light-gradient-3, #dcd3ff), var(--album-dark-gradient-3, #21173f)) 391px, var(--background-gradient-base) 100%);
     --primary-normal: light-dark(#5574ff, #7a92ff);
     --primary-strong: light-dark(#455ece, #90a4ff);
     --text-normal: light-dark(#000, #fff);
@@ -17,8 +22,6 @@
     --icon-filter-primary: brightness(0) saturate(100%) invert(41%) sepia(35%) saturate(1374%) hue-rotate(197deg) brightness(104%) contrast(106%);
     --player-padding: 15px;
     --opacity: 0.5;
-    --left-panel-width: min(350px, 25%);
-    --track-info-and-queue-width: min(300px, 20%);
     --red-filter: brightness(0) saturate(100%) invert(15%) sepia(34%) saturate(7114%) hue-rotate(348deg) brightness(92%) contrast(112%);
     --top-menu-height: 60px;
     --text-shadow: 0 0 10px light-dark(#988bdb, #60578d);
@@ -130,15 +133,24 @@ body.fullscreen {
 }
 
 #center-message {
-    width: 400px;
     max-width: calc(100% - 40px);
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--background-normal);
+    max-height: calc(100% - 80px);
+    width: 400px;
+    background-color: light-dark(var(--background-normal), var(--background-elevated-weak));
     border-radius: 16px;
     padding: 20px 40px;
+    overflow-y: auto;
+}
+
+#center-message span {
+    font-weight: 700;
+    font-size: 1.2em;
+    display: inline-block;
+    text-align: center;
 }
 
 #center-message .button {
@@ -718,21 +730,6 @@ input.search::placeholder {
     text-overflow: ellipsis;
 }
 
-#metadata div {
-    display: flex;
-    padding: 0 20px;
-    align-items: center;
-    gap: 15px;
-    background: var(--background-elevated-weakest);
-    border-radius: 6px;
-    margin-bottom: 5px;
-}
-
-#metadata div p {
-    text-align: right;
-    flex-grow: 1;
-}
-
 #left-panel,
 #track-extra-info,
 #queue-list,
@@ -918,10 +915,13 @@ table tr:has(div):hover td:first-child {
     cursor: pointer;
 }
 
+table tr:has(div) td:first-child::before {
+    margin: 20px 18px;
+}
+
 table tr:has(div):hover td:first-child::before {
     width: 18px;
     height: 18px;
-    margin: 20px 18px;
 }
 
 table tr:has(div):hover td:first-child span {
@@ -965,9 +965,12 @@ table tr.now-playing td:nth-child(2) {
     cursor: pointer;
 }
 
+#queue-listview .album::before {
+    margin: 14px 18px;
+}
+
 #queue-listview .album:hover::before {
     width: 18px;
-    margin: 14px 18px;
     height: 18px;
 }
 
@@ -1204,8 +1207,9 @@ td div img {
     box-sizing: border-box;
 }
 
-#middle-panel:has(#lyrics-tab.open) {
-    background: linear-gradient(light-dark(#fff, #523ba0) 0, light-dark(#e5dfff, #291e51) 100%);
+#middle-panel:has(#lyrics-tab.open),
+#lyric-preview {
+    background: linear-gradient(light-dark(var(--track-light-gradient-1, #fff), var(--track-dark-gradient-1, #523ba0)) 0, light-dark(var(--track-light-gradient-2, #e5dfff), var(--track-dark-gradient-2, #291e51)) 100%);
 }
 
 #middle-panel>div:not(.open) {
@@ -1253,22 +1257,23 @@ td div img {
     display: none;
 }
 
-#lyrics-tab p {
+.lyrics p {
     font-weight: 700;
     font-size: 2.5em;
     margin: 20px 40px;
-    color: light-dark(#bcb7e1, #a5a2fb);
+    opacity: 0.5;
+    color: light-dark(#736da2, #fff);
 }
 
-#lyrics-tab p[data-time] {
+.lyrics p[data-time] {
     cursor: pointer;
 }
 
-#lyrics-tab p.active {
-    color: light-dark(#6e68b3, #fff);
+.lyrics p.active {
+    opacity: 1;
 }
 
-#lyrics-tab p.active span:not(.active) {
+.lyrics p.active span:not(.active) {
     opacity: 0.7;
 }
 
@@ -1519,8 +1524,7 @@ input::placeholder {
 
 .playing-radio .artist,
 .playing-radio #lyrics,
-body:has(.playing-radio) #track-extra-info .song input:nth-child(2),
-body:has(.playing-radio) #metadata textarea {
+body:has(.playing-radio) #track-extra-info .song input:nth-child(2) body:has(.playing-radio) #metadata textarea {
     display: none;
 }
 
@@ -1562,7 +1566,7 @@ body:has(.playing-radio) #track-extra-info .song input:first-of-type {
     height: 100%;
     display: flex;
     align-items: center;
-    width: max(calc((100% - 700px) / 2), 150px);
+    width: max(calc((100% - 700px) / 2), 350px);
 }
 
 .track-info [data-event="toggleFavorite"] {
@@ -1890,7 +1894,7 @@ input[type="range"]::before {
     border-radius: 2px;
 }
 
-.volume::before {
+input[type="range"].volume::before {
     width: var(--volume-before-width);
 }
 
@@ -1924,8 +1928,15 @@ input[type="range"]::-moz-range-track {
     background: var(--background-elevated-normal);
 }
 
-.progress::-moz-range-track {
+.progress::-moz-range-track,
+.progress::-webkit-slider-runnable-track {
     background: linear-gradient(to right, var(--background-elevated-normal) calc(var(--buffered-width) + var(--seek-before-width)), var(--background-elevated-weak) calc(var(--buffered-width) + var(--seek-before-width))) !important;
+    cursor: pointer;
+}
+
+.volume::-moz-range-track,
+.volume::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, var(--background-elevated-normal) calc(var(--volume-before-width)), var(--background-elevated-weak) 100%) !important;
     cursor: pointer;
 }
 
@@ -2143,6 +2154,101 @@ table tbody tr:hover td:first-child img {
     }
 }
 
+#artist-bio {
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--background-elevated-weakest);
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+#artist-bio img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+#artist-bio> :not(img) {
+    padding: 0 20px;
+}
+
+#artist-bio #description {
+    max-height: 90px;
+    overflow: hidden;
+    mask-image: linear-gradient(rgba(0, 0, 0, 1), transparent);
+}
+
+#artist-bio #description p {
+    margin: 0;
+    margin-bottom: 10px;
+}
+
+#metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+#metadata div:has(textarea) {
+    width: calc(100% - 40px);
+    flex-shrink: 0;
+}
+
+#metadata textarea {
+    margin: 10px 0;
+}
+
+#metadata div {
+    background: var(--background-elevated-weakest);
+    border-radius: 8px;
+    padding: 0 20px;
+    flex-grow: 1;
+}
+
+#metadata div h3 {
+    font-size: 2em;
+    margin: 0;
+}
+
+#metadata div p {
+    font-weight: lighter;
+    margin: 0;
+    margin-bottom: 12px;
+}
+
+#metadata div h3 span {
+    font-size: 0.7em;
+    color: var(--text-weak);
+}
+
+#metadata div[data-meta="type"] h3 {
+    font-family: monospace;
+    color: #4ba6e8;
+    margin-top: 7px;
+}
+
+#metadata div>span {
+    display: block;
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
+#metadata div>span:first-child {
+    margin-top: 10px;
+}
+
+#metadata div span:nth-child(2n) {
+    text-align: right;
+}
+
+#metadata div img {
+    height: 25px;
+    margin-right: 10px;
+    margin-top: 10px;
+    filter: brightness(0) saturate(100%) invert(66%) sepia(85%) saturate(523%) hue-rotate(346deg) brightness(99%) contrast(92%);
+}
+
 @media (max-width: 1350px) {
 
     .advanced-controls [data-event="slower"],
@@ -2194,11 +2300,29 @@ table tbody tr:hover td:first-child img {
 
 .track-info [data-event="togglePlay"],
 #mobile-navbar,
-#back {
+#back-menu,
+#lyric-preview {
     display: none;
 }
 
+
 @media (max-width: 800px) {
+    #track-extra-info {
+        background: linear-gradient(to bottom, light-dark(var(--track-light-theme-color), var(--track-dark-theme-color)) 0%, var(--background-normal) 100vh);
+    }
+
+    [data-event="toggleRepeat"].one::after {
+        margin: 20px 8px;
+    }
+
+    #metadata div {
+        background-color: light-dark(#95aaff21, #fff2);
+    }
+
+    #metadata div[data-meta="type"] h3 {
+        color: var(--text-normal);
+    }
+
     body {
         overflow-y: auto;
         overflow-x: hidden;
@@ -2258,7 +2382,9 @@ table tbody tr:hover td:first-child img {
     #feed #recent-albums button .play,
     body:not(:has(#middle-panel.mobile-open #home-tab.open)) #top-menu,
     #logo,
-    #highlight-box div img {
+    #highlight-box div img,
+    #track-extra-info>div>h3,
+    body:has(#lyrics-tab.open) #player {
         display: none !important;
     }
 
@@ -2316,7 +2442,7 @@ table tbody tr:hover td:first-child img {
 
     #player.mobile-expanded {
         position: absolute;
-        top: 355px;
+        top: calc(100vw - 26px * 2 + 200px);
         left: 0;
         width: 100%;
         height: 90px;
@@ -2324,23 +2450,85 @@ table tbody tr:hover td:first-child img {
         display: block;
         box-sizing: border-box;
         background: none;
+        animation: slideup .4s ease forwards;
+    }
+
+    @keyframes slideup {
+        0% {
+            opacity: 0;
+            transform: translateY(100vh);
+        }
+
+        100% {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    #metadata {
+        margin-top: 135px;
+    }
+
+    #lyric-preview {
+        font-size: 0.7em;
+        padding: 0 20px;
+        border-radius: 8px;
+        height: 400px;
+        overflow: hidden;
+        display: block;
+        margin-top: 15px;
+    }
+
+    #lyric-preview p {
+        margin: 20px 0;
+    }
+
+    .playback-buttons {
+        height: 50px;
+    }
+
+    .playback-buttons button {
+        flex-grow: 1;
+        transform: scale(1.2);
+    }
+
+    .playback-buttons button:first-child,
+    .playback-buttons button:last-child {
+        width: 32px;
+        flex-grow: 0;
+    }
+
+    .playback-buttons button[data-event="togglePlay"] {
+        transform: scale(1.5);
+    }
+
+    #track-extra-info.open.has-content {
+        animation: slideup .4s ease forwards;
+    }
+
+    #track-extra-info>div {
+        padding: 12px 26px;
     }
 
     #track-extra-info>div>img,
     #track-extra-info>div>label>img {
-        height: 300px;
-        width: 300px;
+        aspect-ratio: 1 / 1;
+        width: 100%;
         max-width: 100%;
         display: block;
-        margin: 15px auto;
+        margin: 88px auto;
     }
 
     .song {
-        margin-top: 120px;
+        margin-top: -41px;
     }
 
     .track-info {
         width: 100%;
+    }
+
+    .track-info .artist {
+        pointer-events: none;
     }
 
     .track-info div {
@@ -2411,6 +2599,10 @@ table tbody tr:hover td:first-child img {
         bottom: 140px;
     }
 
+    #album-info {
+        margin-top: 50px;
+    }
+
     #album-info,
     #album-controls {
         flex-wrap: wrap;
@@ -2447,12 +2639,6 @@ table tbody tr:hover td:first-child img {
         background: none;
     }
 
-    #track-extra-info>div>h3 {
-        text-overflow: ellipsis;
-        overflow: hidden;
-        text-wrap: nowrap;
-    }
-
     table th:nth-child(3),
     table td:nth-child(3) {
         opacity: 0;
@@ -2462,20 +2648,64 @@ table tbody tr:hover td:first-child img {
         width: 0 !important;
     }
 
-    #back {
-        position: absolute;
-        top: 15px;
-        left: 26px;
+    #queue-list div:first-child h3 {
+        font-size: 1.2em;
+        margin-top: 10px;
+    }
+
+    body:has(#album-tab.open) #back-menu,
+    body:has(#lyrics-tab.open) #back-menu,
+    body:has(#player.mobile-expanded) #back-menu {
+        display: flex;
+        top: 0;
+        left: 0;
+        width: 100%;
+        position: fixed;
+        z-index: 1000;
+        padding: 15px 26px;
+        box-sizing: border-box;
+        align-items: center;
+        transition: background-color .3s ease;
+    }
+
+    #back-menu.scrolled {
+        background-color: light-dark(#fffb, #000b);
+    }
+
+    #back-menu p {
+        text-align: center;
+        flex-grow: 1;
+        margin: 0;
+    }
+
+    #back-menu button {
+        flex-shrink: 0;
         width: 30px;
-        height: 30px;
-        padding: 0;
-        background: url('../svg/back.svg') no-repeat center;
+        height: 20px;
         filter: var(--icon-filter);
-        z-index: 100;
+        padding: 0;
+    }
+
+    #back-menu button#back {
+        background: url('../svg/back.svg') no-repeat center;
+    }
+
+    body:has(#player.mobile-expanded) #back {
+        transform: rotate(-90deg) translate(6px, -5px);
+    }
+
+    #back-menu button#more {
+        /* TODO: add functionality to more button */
+        visibility: hidden;
+        background: url('../svg/ellipsis-vertical.svg') no-repeat center;
     }
 
     body:not(:has(#middle-panel.mobile-open #home-tab.open)):not(:has(#middle-panel.mobile-open #profile-tab.open)):not(:has(#left-panel.mobile-open)):not(:has(#queue-list.mobile-open)) #back {
         display: block;
+    }
+
+    .playback-slider .progress {
+        width: calc(100% - 88px);
     }
 
     #track-extra-info>div>h3 {
@@ -2579,6 +2809,7 @@ table tbody tr:hover td:first-child img {
     gap: 100px;
     justify-content: center;
     margin-bottom: 40px;
+    row-gap: 40px;
 }
 
 .clock,
@@ -2694,4 +2925,97 @@ table tbody tr:hover td:first-child img {
 
 .clock>div>div {
     transform: rotate(calc((var(--rotation-offset) / 2 + var(--child) * var(--rotation-offset)) * 1deg));
+}
+
+#import-progress {
+    width: 100%;
+    border-radius: 8px;
+    height: 16px;
+    background-color: var(--background-elevated-weak);
+    position: relative;
+    overflow: hidden;
+    margin-top: 30px;
+    transition: height .3s ease, margin .3s ease;
+}
+
+#import-progress div {
+    background-color: var(--primary-normal);
+    position: absolute;
+    height: 100%;
+    transition: width 0.3s ease-out;
+}
+
+#import-progress a {
+    display: none;
+}
+
+#import-progress:has(.finished) {
+    height: 40px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+#import-progress .finished a {
+    padding: 12px 20px;
+    display: block;
+    width: 100%;
+    transition: background-color .3s ease;
+    color: #fff;
+}
+
+#import-progress .finished a:hover {
+    background-color: var(--primary-strong);
+}
+
+#import-text img {
+    display: none;
+    height: 30px;
+    width: 30px;
+    object-fit: cover;
+    margin: 10px 10px 10px 0;
+    border-radius: 6px;
+}
+
+#import-text {
+    color: var(--text-weak);
+    display: flex;
+}
+
+#import-text p:last-of-type {
+    margin-left: auto;
+}
+
+#center-message:has(.slide-up) {
+    overflow-y: hidden;
+}
+
+.slide-up {
+    animation: slide-up .3s ease-out;
+}
+
+@keyframes slide-up {
+    0% {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (min-width: 801px) {
+    .fadein {
+        opacity: 0;
+        transform: translateY(20vh);
+        visibility: hidden;
+        transition: opacity 1s ease-out, transform .5s ease-out, visibility 1s ease-out;
+    }
+
+    .done {
+        opacity: 1;
+        transform: none;
+        visibility: visible;
+    }
 }

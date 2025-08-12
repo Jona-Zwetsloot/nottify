@@ -4,18 +4,19 @@ require_once '../config.php';
 header('Content-type: application/json');
 
 if (array_key_exists('uploads_enabled', $config) && !$config['uploads_enabled']) {
-    exit(json_encode(['error' => 'Invalid request. Uploads are disabled.']));
+    exit(json_encode(['error' => text('uploads_disabled')]));
 }
 
 if (!file_exists('../library') || !file_exists('../library/tracks.json') || !file_exists('../library/albums.json')) {
-    exit(json_encode(['error' => 'Required files do not exist yet. Please visit the index page first to generate the required files.']));
+    exit(json_encode(['error' => text('required_files_missing')]));
+    exit(json_encode(['error' => text('required_files_missing')]));
 }
 
 // INPUT SANITIZATION
 
 // Check if required parameters are set
 if (empty($_POST['meta']) || !json_validate($_POST['meta']) || empty($_POST['format']) || !json_validate($_POST['format']) || empty($_FILES['file'])) {
-    exit(json_encode(['error' => 'Invalid request. Make sure you have the "meta", "format", and "file" POST parameters set.']));
+    exit(json_encode(['error' => text('invalid_request')]));
 }
 
 // Check if file is audio file
@@ -23,26 +24,26 @@ if (extension_loaded('fileinfo')) {
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mimeType = $finfo->file($_FILES['file']['tmp_name']);
 } else {
-    exit(json_encode(['error' => 'Please install the fileinfo PHP extension']));
+    exit(json_encode(['error' => text('finfo_missing')]));
 }
 if (!str_starts_with($mimeType, 'audio/') && $mimeType != 'application/octet-stream') {
-    exit(json_encode(['error' => 'Filetype "' . $mimeType . '" is not supported. Make sure you upload an audio file.']));
+    exit(json_encode(['filetype_not_supported' => str_replace('<type>', $mimeType, text('filetype_not_supported'))]));
 }
 
 // Check if multiple files are given
 if (is_array($_FILES['file']['error'])) {
-    exit(json_encode(['error' => 'Multiple files are not supported. Please send one request for each file you want to add to your library.']));
+    exit(json_encode(['error' => text('multiple_files_not_supported')]));
 }
 
 // Check if file is corrupt
 if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-    exit(json_encode(['error' => 'The uploaded file is corrupt.']));
+    exit(json_encode(['error' => text('file_corrupt')]));
 }
 
 // Check if the track is a duplicate and should be disallowed
 $content = file_get_contents('../library/tracks.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid tracks.json']));
+    exit(json_encode(['error' => str_replace('<file>', 'tracks.json', text('invalid_json'))]));
 }
 $tracks = json_decode($content, true);
 $meta = json_decode($_POST['meta'], true);
@@ -75,13 +76,13 @@ if (!file_exists($dir)) {
     try {
         mkdir($dir, 0777, true);
     } catch (Exception $e) {
-        exit(json_encode(['error' => 'The application could not write to directory "' . $dir . '".']));
+        exit(json_encode(['error' => str_replace('<dir>', $dir, text('could_not_create_directory'))]));
     }
 }
 
 // Save audio file
 if (!move_uploaded_file($_FILES['file']['tmp_name'], $dir . '/' . $name . $ext)) {
-    exit(json_encode(['error' => 'Server error. Could not save file.']));
+    exit(json_encode(['error' => str_replace('<file>', $name . $ext, text('could_not_save_file'))]));
 }
 
 if (empty($meta['title'])) {
@@ -110,7 +111,7 @@ if (isset($_POST['picture']) && is_array($_POST['picture'])) {
             $finfo = new finfo(FILEINFO_MIME_TYPE);
             $mimeType = $finfo->buffer($content);
         } else {
-            exit(json_encode(['error' => 'Please install the fileinfo PHP extension']));
+            exit(json_encode(['error' => text('finfo_missing')]));
         }
 
         // Validate MIME type (only allow images)
@@ -118,10 +119,10 @@ if (isset($_POST['picture']) && is_array($_POST['picture'])) {
             continue;
         }
 
-        $ext = mime2ext($mimeType);
+        $ext = mimeToFileExtension($mimeType);
 
         $filename = $displayDir . '/' . $name . ($i == 0 ? '' : $i + 1) . '.' . $ext;
-        write_file('../' . $filename, $content);
+        writeFile('../' . $filename, $content);
         array_push($tracks[$trackId]['pictures'], [
             'url' => $filename,
             'mime' => $mimeType,
@@ -137,17 +138,17 @@ if (isset($_POST['gain']) && is_float((float)$_POST['gain']) && $_POST['gain'] >
 }
 
 // Add to library
-write_file('../library/tracks.json', json_encode($tracks));
+writeFile('../library/tracks.json', json_encode($tracks));
 
 // Add or update album data
 $content = file_get_contents('../library/albums.json', true);
 if (!json_validate($content)) {
-    exit(json_encode(['error' => 'Invalid albums.json']));
+    exit(json_encode(['error' => str_replace('<file>', 'albums.json', text('invalid_json'))]));
 }
 $albums = json_decode($content, true);
 $albumName = isset($meta['album']) ? $meta['album'] : '';
 foreach ($albums as $key => $value) {
-    if ($albums[$key]['name'] == $albumName) {
+    if ($albums[$key]['name'] != null && $albums[$key]['name'] == $albumName) {
         $albumId = $key;
         break;
     }
@@ -187,7 +188,7 @@ if (isset($meta['artists'])) {
     }
 }
 
-write_file('../library/albums.json', json_encode($albums));
+writeFile('../library/albums.json', json_encode($albums));
 
 // Output
 exit(json_encode([

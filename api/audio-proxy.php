@@ -1,5 +1,6 @@
 <?php
 // Proxy audio stream, is used for radio streaming. Returns audio stream.
+require_once '../config.php';
 
 $audioUrl = $_GET['url'];
 $ch = curl_init($audioUrl);
@@ -15,12 +16,15 @@ header("Content-Type: audio/mpeg");
 header("Cache-Control: no-cache");
 header("Connection: keep-alive");
 
+if (array_key_exists('curl_use_default_cacert', $config) && !$config['curl_use_default_cacert']) {
+    curl_setopt($ch, CURLOPT_CAINFO, str_replace('\\', '/', dirname(__FILE__)) . '/resources/cacert.pem');
+}
 if (array_key_exists('curl_verify_ssl_certificates', $config) && !$config['curl_verify_ssl_certificates']) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 }
 curl_exec($ch);
 if ($output === false) {
-    exitMessage('Curl error', curl_error($ch));
+    exitMessage('cURL error', curl_error($ch));
 }
 curl_close($ch);

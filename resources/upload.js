@@ -111,7 +111,7 @@ async function uploadFile(file, lrc) {
     formData.append('meta', JSON.stringify(meta));
     formData.append('format', JSON.stringify(metadata.format));
 
-    const json = await request('api/upload', {
+    const json = await request('api/upload.php', {
         method: 'POST',
         body: formData
     }, ['track_key', 'track', 'album_key', 'album']);
@@ -143,7 +143,7 @@ async function uploadFile(file, lrc) {
         }
         addMissingMetaData();
         populateFeed();
-        openAlbum(json.album_key);
+        openAlbum(json.album_key, true);
     }
 }
 
