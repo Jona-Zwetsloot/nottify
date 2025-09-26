@@ -320,9 +320,11 @@ function addAlbum($album, $hide = false)
     $total = $albumTracks['total'];
     $limit = $albumTracks['limit'];
 
-    for ($i = 0; $i < floor($total / $limit); $i++) {
-        $albumTracks = requestURL($url . '?offset=' . (($i + 1) * $limit) . '&limit=' . $limit, 'spotify');
-        addTracks($album, $albumTracks, $hide);
+    if ($limit != 0) {
+        for ($i = 0; $i < floor($total / $limit); $i++) {
+            $albumTracks = requestURL($url . '?offset=' . (($i + 1) * $limit) . '&limit=' . $limit, 'spotify');
+            addTracks($album, $albumTracks, $hide);
+        }
     }
 }
 
