@@ -4,6 +4,8 @@
 
 > [!NOTE]  
 > nottify is still in beta phase. Some parts of the application are not translated yet. There might also be some small issues and weird behaviour. More features will be added later.
+> 
+> Or not, I don't know when I have time to pick development up again (will happen someday, but not soon I think). The Javascript is a mess right now, I really have to break it up in different modules sometime.
 
 <br>
 
@@ -11,32 +13,32 @@
 
 nottify is a PHP based web application. It is aimed at self-hosters. **You can just download a ZIP of the repo, unpack it and yeet it somewhere on your PHP-server and it will work immediately.** No setup required. No database. Just you and your music.
 
-✅ Simple install with complete control over the application
+- Simple install with complete control over the application
 
-✅ Supports mobile and computer layout
+- Supports mobile and computer layout
 
-✅ Manage all your music in one place
+- Manage all your music in one place
 
-✅ Keep using all features you're used to, like synced lyrics and audio normalization
+- Keep using all features you're used to, like synced lyrics and audio normalization
 
-✅ Still access your music collection on Spotify, 
+- Still access your music collection on Spotify, 
 
-✅ With optional implementation of the [Musicbrainz](https://musicbrainz.org/doc/MusicBrainz_API), [LRCLIB](https://lrclib.net/docs), [Genius](https://docs.genius.com), [radio-browser](https://api.radio-browser.info/), [Last.fm](https://www.last.fm/api) and [Spotify](https://developer.spotify.com) API
+- With optional implementation of the [Musicbrainz](https://musicbrainz.org/doc/MusicBrainz_API), [LRCLIB](https://lrclib.net/docs), [Genius](https://docs.genius.com), [radio-browser](https://api.radio-browser.info/), [Last.fm](https://www.last.fm/api) and [Spotify](https://developer.spotify.com) API
 
 <br>
 
 # a few tips
 Once you've installed nottify you can either call it a day or customize your experience further. **If you want to do some customizing, then here's a few tips:**
 
-⚙️ Look in the config.php file for settings to modify.
+- Look in the config.php file for settings to modify.
 
-🔑 Enter API client details for Spotify, Genius and/or Last.fm in config.php. It's free and unlocks multiple features, such as Spotify streaming, more artist data and viewing what your friends are listening to.
+- Enter API client details for Spotify, Genius and/or Last.fm in config.php. It's free and unlocks multiple features, such as Spotify streaming, more artist data and viewing what your friends are listening to.
 
-📜 Missing your language? nottify supports English and Dutch by default, but you can add languages by duplicating `locales/en.json`, modifying it, and saving it under `locales/[countrycode].json`.
+- Missing your language? nottify supports English and Dutch by default, but you can add languages by duplicating `locales/en.json`, modifying it, and saving it under `locales/[countrycode].json`.
 
-🗑️ The cache folder is as the name indicates a cache folder. You can safely remove it whenever if you want to.
+- The cache folder is as the name indicates a cache folder. You can safely remove it whenever if you want to.
 
-📂 The library folder contains your music. You can safely replace audio, image and lyric files (you'll need to reset the cache though). Added files will not be recognised, deleted files will create ghost songs/images/lyrics in your library until you delete them there too, so please don't do that. Also, don't touch the JSON files unless you know what you're doing.
+- The library folder contains your music. You can safely replace audio, image and lyric files (you'll need to reset the cache though). Added files will not be recognised, deleted files will create ghost songs/images/lyrics in your library until you delete them there too, so please don't do that. Also, don't touch the JSON files unless you know what you're doing.
 
 <br>
 
